@@ -1,0 +1,52 @@
+services:
+
+  web:
+    # optional: started only when COMPOSE_PROFILES in .env includes "web" (empty: email-only)
+    profiles: [web]
+    container_name: ${CONTAINER_NAME:-health-check}
+    build:
+      context: ./services/web
+      dockerfile: Dockerfile
+    command: bash -c 'gunicorn --no-control-socket --bind 0.0.0.0:5000 manage:app'
+    ports:
+      - ${WEB_BIND:-127.0.0.1:8080}:5000  # WEB_BIND in .env; keep it off the public internet, behind the reverse proxy
+    restart: unless-stopped
+    environment:
+      - FLASK_APP=project/__init__.py
+      - FLASK_ENV=production
+      - DB_PATH=/data/health-check.sqlite3
+      # the app settings from .env, one by one: the web service never gets the mail passwords
+      - APP_NAME=${APP_NAME:-}
+      - PUBLIC_URL=${PUBLIC_URL:-}
+      - TRUSTED_MX_HOSTS=${TRUSTED_MX_HOSTS:-}
+      - DISPLAY_TIMEZONE=${DISPLAY_TIMEZONE:-}
+      - TRUSTED_PROXY_HOPS=${TRUSTED_PROXY_HOPS:-}
+      - RESULTS_KEPT_HOURS=${RESULTS_KEPT_HOURS:-}
+      - RESULTS_KEPT_AFTER_VIEW_MINUTES=${RESULTS_KEPT_AFTER_VIEW_MINUTES:-}
+      - LOOKUPS_PER_MINUTE=${LOOKUPS_PER_MINUTE:-}
+      - LOOKUPS_PER_HOUR=${LOOKUPS_PER_HOUR:-}
+      - MAIL_PER_RECIPIENT_PER_HOUR=${MAIL_PER_RECIPIENT_PER_HOUR:-}
+      - MAIL_PER_RECIPIENT_PER_DAY=${MAIL_PER_RECIPIENT_PER_DAY:-}
+      - MAIL_PER_DAY=${MAIL_PER_DAY:-}
+      - DOCS_ENABLED=${DOCS_ENABLED:-}
+      # shown in the documentation: the address to send tests to, and how often it's checked
+      - RECEIVING_EMAIL_ADDRESS=${RECEIVING_EMAIL_ADDRESS:-}
+      - POLL_SECONDS=${POLL_SECONDS:-}
+    volumes:
+      - data:/data
+
+  poller:
+    container_name: ${CONTAINER_NAME:-health-check}-poller
+    build:
+      context: ./services/web
+      dockerfile: Dockerfile
+    command: python -m healthcheck.poller
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DB_PATH=/data/health-check.sqlite3
+    volumes:
+      - data:/data
+
+volumes:
+  data:

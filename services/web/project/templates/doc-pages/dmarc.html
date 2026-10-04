@@ -1,0 +1,89 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<h2 id="what-it-proves">What it proves</h2>
+<p>DMARC (Domain-based Message Authentication, Reporting and Conformance) ties SPF and DKIM to the domain
+    people actually see: the one in the From: address. The domain publishes a policy in a DNS TXT record at
+    <code>_dmarc.<em>domain</em></code>, for example:</p>
+<pre>v=DMARC1; p=quarantine; rua=mailto:dmarc-reports@example.com</pre>
+<p><code>rua=</code> is where receivers send DMARC reports: daily summaries (XML files) of the mail they saw from
+    the domain and whether it passed. They're separate from this health check's report, and the best way to
+    find mail that would fail before tightening the policy. The health check doesn't check that reports
+    actually reach the <code>rua=</code> address.</p>
+<p>A message passes DMARC when SPF or DKIM passes <em>for a domain that matches the From: domain</em> (see
+    <a href="#alignment">Alignment</a>). The policy tells receivers what to do with mail that fails:</p>
+<table class="docs-table">
+    <thead><tr><th>Policy</th><th>Effect on failing mail</th></tr></thead>
+    <tbody>
+        {% for policy in ("none", "quarantine", "reject") %}
+        <tr><td><code>p={{ policy }}</code></td><td>{{ explain.dmarc_policy[policy] }}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p><code>pct=</code> asks receivers to apply the policy to only that percentage of failing mail (100 if it's left
+    out). It changes what happens to failures, not whether a message passes.</p>
+<p>When the From: domain is a subdomain without its own record, the record of its
+    <a href="{{ url_for('docs.page', slug='glossary') }}#org-domain">organizational domain</a> applies (with its
+    <code>sp=</code> policy, if it has one).</p>
+
+<h2 id="results">Results</h2>
+<table class="docs-table">
+    <thead><tr><th>Result</th><th>Meaning</th></tr></thead>
+    <tbody>
+        {{ m.result("pass", "SPF or DKIM passed for a domain aligned with the From: domain.") }}
+        {{ m.result("fail", "Neither SPF nor DKIM passed for a domain aligned with the From: domain. The box adds what the policy means for such mail.") }}
+        {{ m.result("none", "The domain has no DMARC record, so receivers fall back to their own rules. The box says whether it would have passed.") }}
+        {{ m.result("permerror", "The record is invalid (or there's more than one), so receivers ignore it.") }}
+        {{ m.result("temperror", "A temporary DNS error stopped DMARC, SPF or DKIM, so DMARC couldn't be decided. Send another test.") }}
+    </tbody>
+</table>
+<p>"Not checked" means the message didn't have exactly one From: address. A domain with more than one DMARC
+    record gets <code>permerror</code>: receivers ignore them all. Only a TXT record starting with
+    <code>v=DMARC1</code> counts, so a record with a misspelled or misplaced version tag is ignored (for a
+    subdomain, its organizational domain's record may then apply).</p>
+
+<h2 id="alignment">Alignment</h2>
+<p>Alignment means the domain that passed SPF or DKIM matches the From: domain:</p>
+<ul>
+    <li><strong>SPF aligned</strong>: SPF passed, and the envelope sender's domain matches the From: domain.</li>
+    <li><strong>DKIM aligned</strong>: a DKIM signature passed, and the domain it's for matches the From: domain.</li>
+</ul>
+<p>By default the match is <em>relaxed</em>: subdomains count, so <code>bounces.example.com</code> matches
+    <code>example.com</code>. A record can ask for a <em>strict</em> (exact) match with <code>aspf=s</code> or
+    <code>adkim=s</code>.</p>
+<p class="callout note">This is why a mail service that passes SPF and DKIM with its own domain can still fail
+    DMARC for yours. Setting up DKIM for your own domain with the service is usually the fix.</p>
+
+<h2 id="rows">What the box shows</h2>
+<dl class="docs-defs">
+    <dt>Record</dt><dd>Where the record was found, and the record itself.</dd>
+    <dt>Policy</dt><dd>The policy that applies to this message: none, quarantine or reject.</dd>
+    <dt>SPF aligned</dt><dd>Yes or no, as above.</dd>
+    <dt>DKIM aligned</dt><dd>Yes or no, as above.</dd>
+</dl>
+
+<h2 id="problems">Problem notes</h2>
+<p>A tag given twice (two <code>p=</code>, say) makes the record invalid: <code>permerror</code>. Other mistakes
+    in the record get a "Problem:" note: an invalid or missing <code>p=</code> policy, an invalid
+    <code>sp=</code>, an <code>adkim=</code> or <code>aspf=</code> value other than r or s, or a
+    <code>pct=</code> that isn't a number from 0 to 100. The note says what receivers do instead. For example,
+    a record with an invalid policy but a valid <code>rua=</code> reporting address is treated as
+    <code>p=none</code>.</p>
+<p>A "Problem:" note makes the summary's "Is authenticated" line {{ "warn"|mark }} (unless SPF has
+    already made it {{ false|mark }}). So does DMARC that fails,
+    and DMARC that's set up for mail with no DKIM signature: DMARC then depends on SPF alone, which breaks when
+    mail is forwarded.</p>
+
+<h2 id="fixing">Fixing it</h2>
+<ul>
+    <li><strong>fail</strong>: make SPF or, better, DKIM pass for your own domain, for every service that sends
+        your mail (see <a href="{{ url_for('docs.page', slug='spf') }}#fixing">SPF</a> and
+        <a href="{{ url_for('docs.page', slug='dkim') }}#fixing">DKIM</a>). Before tightening the policy, use the
+        DMARC reports to check that all your real mail passes.</li>
+    <li><strong>none</strong>: publish a record, starting with <code>v=DMARC1; p=none;</code> and a
+        <code>rua=</code> address to receive reports. Move to <code>quarantine</code> or <code>reject</code>
+        once the reports show all your mail passing.</li>
+    <li><strong>permerror</strong>: fix the record so it starts with <code>v=DMARC1</code> and has a valid
+        <code>p=</code>, and make sure there's only one record at <code>_dmarc.<em>domain</em></code>.</li>
+</ul>
+{% endblock %}

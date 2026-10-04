@@ -1,0 +1,54 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<h2 id="what-is-kept">What's kept</h2>
+<ul>
+    <li><strong>Your message's text is never stored.</strong> It's only read, in memory, to check the DKIM
+        signature.</li>
+    <li>Each test is deleted from the test mailbox as soon as it has been checked (and its report sent or given
+        up on).</li>
+    {% if v.public_url %}
+    <li>For the website, the report is kept: the message's headers and the results of the checks. It expires
+        {{ v.viewed_minutes }} minutes after it's first shown here, or after {{ v.unviewed_hours }} hours if
+        nobody looks, and is then deleted at the next clean-up. Viewing a report also deletes older reports for
+        the same address, and only the most recent {{ v.max_results }} reports are kept.</li>
+    {% else %}
+    <li>Reports aren't kept: they're only emailed.</li>
+    {% endif %}
+    <li>To enforce the <a href="#limits">limits</a>, the service counts lookups and reports per network and per
+        address. It stores those as salted hashes, not as IP addresses or email addresses, for a day.</li>
+    <li>The service's logs record counts and reasons, never addresses.</li>
+</ul>
+
+<h2 id="who-can-see">Who can see a report</h2>
+<p>The website looks reports up by the address they were sent from (the From: address or the envelope sender),
+    so anyone who knows that address can view its latest report while it's kept, and viewing it starts its {{ v.viewed_minutes }}-minute clock. A report
+    holds only what's in the test's headers and public DNS records, never the message's text, so send tests
+    without anything private in their headers, such as the subject.</p>
+<p>Links in the emailed reports use a random code, and the address is never part of any web address on this
+    website, so it isn't kept in browser histories or web server access logs.</p>
+
+<h2 id="limits">Limits</h2>
+<table class="docs-table">
+    <thead><tr><th>What</th><th>Limit</th></tr></thead>
+    <tbody>
+        <tr><td>Reports emailed to one address</td><td>{{ v.mail_hour }} an hour, {{ v.mail_day }} a day</td></tr>
+        <tr><td>Reports emailed in total</td><td>{{ v.mail_total }} a day, from everyone</td></tr>
+        <tr><td>Report lookups on this website</td><td>{{ v.lookups_minute }} a minute, {{ v.lookups_hour }} an hour, per network</td></tr>
+        <tr><td>Test message size</td><td>{{ v.max_mb }} MB (bigger messages are deleted without a reply)</td></tr>
+        <tr><td>Headers in the report</td><td>{{ v.max_header_kb }} KB (anything longer is cut off)</td></tr>
+        <tr><td>DKIM signatures checked</td><td>{{ v.max_signatures }} per message</td></tr>
+        <tr><td>Sending retries</td><td>up to {{ v.max_attempts }} attempts, at least {{ v.retry_schedule }} minutes apart (retries don't count against the limits again)</td></tr>
+        <tr><td>Reports kept for the website</td><td>the most recent {{ v.max_results }}</td></tr>
+    </tbody>
+</table>
+{% if v.poll_seconds %}<p>The test mailbox is checked every {{ v.poll_seconds }} seconds.</p>{% endif %}
+
+<h2 id="website">The website</h2>
+<ul>
+    <li>No cookies, no tracking, no JavaScript and nothing loaded from other websites.</li>
+    <li>Search engines are asked not to index any of it.</li>
+    <li>Forms posted from other websites are refused, so another site can't look up a report and start its
+        clock.</li>
+</ul>
+{% endblock %}

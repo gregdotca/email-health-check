@@ -1,0 +1,41 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<h2 id="what-it-proves">What it proves</h2>
+<p>A PTR record (reverse DNS) gives an IP address a name, such as <code>mail.example.com</code>. The check
+    looks up the name for the server that delivered the test, then looks that name up again to make sure it
+    points back to the same IP address. This is called forward-confirmed reverse DNS. If the IP address has
+    several PTR names, the first five are tried, and one that points back is enough. IPv6 addresses are checked
+    the same way.</p>
+<p>Many receiving servers expect a mail server to have it, and treat mail from an IP address without it as
+    suspicious. It's about the sending server, not the domain, so it isn't part of the summary.</p>
+<p class="callout note">If you send through a mail provider, its servers are the ones checked. Their reverse DNS
+    is the provider's job, not yours.</p>
+
+<h2 id="results">Results</h2>
+<table class="docs-table">
+    <thead><tr><th>Result</th><th>Meaning</th></tr></thead>
+    <tbody>
+        {% for word in ("pass", "mismatch", "none", "temperror", "not checked") %}
+        {{ m.result(word, explain.ptr[word]) }}
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2 id="rows">What the box shows</h2>
+<dl class="docs-defs">
+    <dt>Domain -&gt; IP</dt><dd>The PTR name, and the addresses it resolves to.</dd>
+    <dt>IP -&gt; Domain</dt><dd>The sending IP address, and the name or names its PTR record gives.</dd>
+</dl>
+<p>If a DNS lookup failed, the row for that lookup says "DNS lookup failed".</p>
+
+<h2 id="fixing">Fixing it</h2>
+<ul>
+    <li><strong>none</strong>: ask whoever controls the IP address (your hosting or network provider) to set a PTR
+        record for it, using the name your mail server uses.</li>
+    <li><strong>mismatch</strong>: add an A (or AAAA) record so the PTR name points back to the same IP
+        address, or change the PTR record to a name that does.</li>
+    <li><strong>temperror</strong>: send another test. If it keeps happening, check that the DNS servers for the
+        IP address and the name are answering.</li>
+</ul>
+{% endblock %}

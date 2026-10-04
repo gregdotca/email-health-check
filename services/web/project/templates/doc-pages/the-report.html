@@ -1,0 +1,108 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<p>The report reads from top to bottom: first the verdict, then the message it's about, then one box per
+    check. Explanations only appear for checks that don't pass, so a healthy domain's report is short.</p>
+
+<h2 id="email">The email</h2>
+<p>The report arrives as a reply to your test, from <strong>{{ app_title }}</strong>, with the subject
+    <code>Report for yourdomain.com</code>. It has a plain-text and an HTML version with the same content, and
+    two attachments (see <a href="#attachments">Attachments</a>).
+    {% if v.public_url %}It ends with a link to the same report on this website.{% endif %}</p>
+<p>It's sent as a reply, so most mail programs show it in the same conversation as your test, and it's marked
+    as an automatic reply so other auto-responders (such as out-of-office replies) don't answer it.</p>
+<p>Times are shown in the {{ v.timezone }} time zone, like this: <em>{{ v.example_time }}</em>.</p>
+
+<h2 id="summary-box">The summary</h2>
+<p>The first box names the domain being tested (the domain of the From: address), gives an overall status,
+    and answers three questions: can the domain send email, can it receive email, and is its mail
+    authenticated.</p>
+{{ m.overview(examples["esp-only"], titled=True) }}
+<p>Here the domain's mail is signed only by its mail service's own domain, not by example.com, so the
+    status is Needs Attention. <a href="{{ url_for('docs.page', slug='summary') }}">The summary</a> explains
+    every mark and the rules behind each answer.</p>
+
+<h2 id="message-box">Message details</h2>
+<p>The next box, lightly highlighted, says which message the report is about:</p>
+<div class="card summary-card docs-example">
+    <header>
+        <h2>Subject: Testing our mail setup</h2>
+        <dl class="meta">
+            <dt>Date Received</dt><dd>{{ v.example_time }}</dd>
+            <dt>From Address</dt><dd class="mono">you@example.com</dd>
+            <dt>Sending IP</dt><dd class="mono">192.0.2.25 (mail.example.com)</dd>
+        </dl>
+    </header>
+    <div class="summary">
+        <span class="badge good">PTR: pass</span>
+        <span class="badge good">SPF: pass</span>
+        <span class="badge good">DKIM: pass</span>
+        <span class="badge good">DMARC: pass</span>
+    </div>
+</div>
+<dl class="docs-defs">
+    <dt>Subject</dt><dd>The test message's subject, decoded if it was encoded.</dd>
+    <dt>Date Received</dt><dd>When the receiving mail server accepted it (or, if that isn't known, when it was
+        checked).</dd>
+    <dt>From Address</dt><dd>The address in the From: header (the address only, without a display name). This is
+        the domain the summary is about, and where the report is sent.</dd>
+    <dt>Sending IP</dt><dd>The server that delivered the test to the receiving mail server, with its verified
+        name in brackets when it has one. This is the server SPF and PTR are checked for.</dd>
+</dl>
+<p>The row of badges at the bottom gives each check's result in one word.</p>
+
+<h2 id="check-boxes">The four checks</h2>
+<p>A box for each check follows, in this order. Each one starts with the result, explains it when it isn't a
+    pass, and lists the details it looked at:</p>
+<div class="docs-cards">
+    {% for slug in ("ptr", "spf", "dkim", "dmarc") %}
+    {% set p = pages|selectattr("slug", "equalto", slug)|first %}
+    <a class="docs-card" href="{{ p.url }}"><strong>{{ p.title }}</strong><span>{{ p.lead }}</span></a>
+    {% endfor %}
+</div>
+<p>Result badges are coloured by how serious they are:</p>
+<table class="docs-table">
+    <thead><tr><th>Colour</th><th>Meaning</th></tr></thead>
+    <tbody>
+        <tr><td><span class="badge good">pass</span></td><td>The check passed.</td></tr>
+        <tr><td><span class="badge warn">softfail</span></td><td>A weak failure, or a temporary error worth trying again (<code>softfail</code>, <code>temperror</code>).</td></tr>
+        <tr><td><span class="badge bad">fail</span></td><td>The check failed or the record is broken (<code>fail</code>, <code>permerror</code>, <code>mismatch</code>).</td></tr>
+        <tr><td><span class="badge neutral">none</span></td><td>Nothing to check, or no verdict (<code>none</code>, <code>neutral</code>, <code>not checked</code>).</td></tr>
+    </tbody>
+</table>
+
+<h2 id="notes">Notes and problems</h2>
+<p>Two kinds of notes can appear, in yellow:</p>
+<ul>
+    <li><strong>Notes</strong> in the message details box, about the test itself:
+        <ul>
+            <li>it was sent by logging in to the same mail server that received it, so the results don't show
+                what other receivers would see (see
+                <a href="{{ url_for('docs.page', slug='troubleshooting') }}#submitted">Troubleshooting</a>)</li>
+            <li>the receiving mail server's record of the delivery couldn't be found, so SPF and PTR weren't
+                checked</li>
+            <li>the message doesn't have exactly one From: address, so DMARC doesn't apply</li>
+            <li>the message has no DKIM signature, or more than {{ v.max_signatures }} (only the first
+                {{ v.max_signatures }} are checked)</li>
+        </ul></li>
+    <li><strong>"Problem:" notes</strong> in the SPF and DMARC boxes, when the record itself has a problem,
+        even if this test passed. For example, an SPF record that's close to its limit of {{ v.max_lookups }}
+        DNS lookups, or a DMARC record with an invalid policy.</li>
+</ul>
+<p>If a message couldn't be checked at all, the report online says so in red instead of showing the checks,
+    and no report is emailed. Very long values (a huge subject, say) are cut off and end in "…".</p>
+
+<h2 id="attachments">Attachments</h2>
+<dl class="docs-defs">
+    <dt>{{ app_title }} Summary (yourdomain.com).png</dt>
+    <dd>The summary box as a picture, to paste into a ticket, a chat or a slide. (If the picture can't be drawn,
+        the report is sent without it.)</dd>
+    <dt>Email Headers (yourdomain.com).txt</dt>
+    <dd>The test message's headers as text, for a closer look (headers over {{ v.max_header_kb }} KB are cut off).
+        The message's text is never included.</dd>
+</dl>
+<figure class="docs-figure">
+    <img src="{{ url_for('docs.example_png') }}" alt="An example summary picture: example.com, Needs Attention, because its mail is DKIM-signed only by its mail service" width="640">
+    <figcaption>An example summary picture, as attached to the email.</figcaption>
+</figure>
+{% endblock %}

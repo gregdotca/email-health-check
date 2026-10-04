@@ -1,0 +1,80 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<h2 id="no-report">No report arrived</h2>
+<p>Give it a couple of minutes, and check your spam folder. Then
+    {% if v.public_url %}<a href="{{ url_for('docs.page', slug='view-online') }}">look the report up online</a>
+    with the address you sent from{% else %}work through the list below{% endif %}:</p>
+<ul>
+    <li><strong>The report online says no report was emailed.</strong> Usually the test was one that isn't
+        answered (see <a href="{{ url_for('docs.page', slug='send-a-test') }}#not-answered">Messages that aren't
+        answered</a>): send it straight from a mailbox instead. It can also mean a
+        <a href="{{ url_for('docs.page', slug='send-a-test') }}#how-often">sending limit</a> was reached, or the
+        report couldn't be sent. If neither explains it, ask whoever runs this service to check its logs.</li>
+    <li><strong>The report is online, but the email never came.</strong> Your own mail system may have filtered or
+        rejected the reply: check your spam folder and filtering, and that the domain has MX records. The report is
+        saved before the email is sent, so the email may also still be waiting to be retried.</li>
+    <li><strong>There's no report online either.</strong> The test may not have been checked yet, its report may
+        already have expired, or it never reached the check. Make sure it was sent to {{ m.address(v) }} and didn't
+        bounce. A message the receiving mail server's spam filter rejects or deletes never arrives, so a test that
+        looks very much like spam may not get through. Messages over {{ v.max_mb }} MB are deleted without a
+        reply.</li>
+</ul>
+
+<h2 id="not-found">No report on the website</h2>
+<ul>
+    <li>Enter the address the test was sent <em>from</em>, not the test address.</li>
+    <li>Reports expire {{ v.viewed_minutes }} minutes after they're first shown, and after
+        {{ v.unviewed_hours }} hours if nobody looks. Viewing one also deletes older reports for that address.
+        Send a new test.</li>
+    <li>The test may not have been checked yet: wait {{ m.within(v) }} and try again.</li>
+    <li>"Enter the email address you sent the test from." means what you entered wasn't an email address: enter
+        just the address, without a name or angle brackets.</li>
+    <li>"Please use the form on this page." means the form was sent from another website, which is refused.
+        Open this website directly and use its form.</li>
+    <li>"The service is busy. Please try again in a moment." means the website couldn't reach its database just
+        then. Try again shortly.</li>
+    <li>"Too many lookups from your network" means the lookup limit ({{ v.lookups_minute }} a minute,
+        {{ v.lookups_hour }} an hour) was reached. Wait and try again: the hourly limit can take up to an hour to
+        clear.</li>
+</ul>
+
+<h2 id="needs-attention">The report says Needs Attention</h2>
+<p>At least one line of the summary is {{ false|mark }} or {{ "warn"|mark }}. The line itself says what's wrong,
+    and the box for that check explains it. The most common causes:</p>
+<table class="docs-table">
+    <thead><tr><th>The summary says</th><th>What to do</th></tr></thead>
+    <tbody>
+        <tr><td>Is authenticated: No (SPF: softfail, fail, neutral or none)</td><td>Add the sending server or service to your <a href="{{ url_for('docs.page', slug='spf') }}#fixing">SPF record</a>.</td></tr>
+        <tr><td>no DKIM signature for <em>yourdomain</em></td><td>Your mail service signs with its own domain. Turn on <a href="{{ url_for('docs.page', slug='dkim') }}#fixing">DKIM for your domain</a> in its settings.</td></tr>
+        <tr><td>no DKIM signature</td><td>You have DMARC but no DKIM. <a href="{{ url_for('docs.page', slug='dkim') }}#fixing">Set up DKIM</a>.</td></tr>
+        <tr><td>DKIM: fail or permerror</td><td>See <a href="{{ url_for('docs.page', slug='dkim') }}#fixing">DKIM</a>: a missing key record, or a message changed on the way.</td></tr>
+        <tr><td>DMARC: fail or permerror</td><td>See <a href="{{ url_for('docs.page', slug='dmarc') }}#fixing">DMARC</a>.</td></tr>
+        <tr><td>a problem with the SPF record</td><td>Read the "Problem:" note in the SPF box: usually <a href="{{ url_for('docs.page', slug='spf') }}#problems">too many DNS lookups</a>.</td></tr>
+        <tr><td>a problem with the DMARC record</td><td>Read the "Problem:" note in the DMARC box.</td></tr>
+        <tr><td>Can receive email: No MX records</td><td>Publish MX records naming the servers that receive the domain's mail.</td></tr>
+    </tbody>
+</table>
+<p>After changing DNS, wait for the change to take effect (up to the record's TTL), then send another test.</p>
+
+<h2 id="incomplete">The report says Incomplete</h2>
+<p>Nothing failed, but something couldn't be checked: usually a temporary DNS error, so send another test. If
+    it keeps happening, check that the domain's DNS servers are answering. Two other causes:</p>
+<ul>
+    <li>The message has more than {{ v.max_signatures }} DKIM signatures, so not all of them were checked.</li>
+    <li>The SPF record's DNS lookups couldn't all be counted (for example, because of macros or a loop).</li>
+</ul>
+<p>On this website the status is never higher than Incomplete, and that's expected (see
+    <a href="{{ url_for('docs.page', slug='view-online') }}#email-vs-web">The website and the email</a>).</p>
+
+<h2 id="submitted">Sent by logging in to the receiving server</h2>
+<p>If your domain's mail is hosted on the same mail server that receives the tests, a test you send is handed
+    over by logging in to that server, not delivered from another mail server the way your mail reaches
+    everyone else. The report then shows a note, and its "Is authenticated" line shows {{ none|mark }}: SPF is
+    checked against the server that logged in, and that path isn't DKIM-signed, so the results don't show what
+    other receivers would see. Problems with the records themselves are still listed (and make it
+    {{ "warn"|mark }}).</p>
+<p>To get a full report for the same domain, send from an address at that domain through a different outgoing
+    mail service, one that delivers to the receiving server like any other mail server. (Sending from an
+    unrelated address, such as a personal one, tests that address's domain instead.)</p>
+{% endblock %}

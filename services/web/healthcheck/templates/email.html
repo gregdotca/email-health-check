@@ -1,0 +1,163 @@
+{#- HTML part of the results email. Email clients drop most CSS, so: tables, inline styles, no images. -#}
+{%- set colours = {"good": ("#1a7f37", "#dafbe1"), "bad": ("#b42318", "#fde4e1"),
+                   "warn": ("#8a5300", "#fff3cd"), "neutral": ("#57606a", "#eaeef2")} -%}
+{%- set font = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" -%}
+{%- set mono = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" -%}
+
+{%- macro badge(word, label=none) -%}
+{%- set fg, bg = colours[word|verdict] -%}
+<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;color:{{ fg }};background:{{ bg }};white-space:nowrap;">{{ label or word }}</span>
+{%- endmacro -%}
+
+{%- macro row(label, value, is_mono=false) -%}
+<tr>
+  <td style="padding:3px 16px 3px 0;color:#5d6166;vertical-align:top;white-space:nowrap;font-size:14px;">{{ label }}</td>
+  <td style="padding:3px 0;vertical-align:top;font-size:14px;word-break:break-word;{% if is_mono %}font-family:{{ mono }};font-size:13px;{% endif %}">{{ value }}</td>
+</tr>
+{%- endmacro -%}
+
+{#- highlight: the first box (subject and message details) stands out a little, as on the web page -#}
+{%- macro card(last=false, highlight=false) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border:1px solid {{ '#ecc976' if highlight else '#e2e2dc' }};border-radius:12px;margin:0 0 {{ '0' if last else '16px' }};background:{{ '#fffcf2' if highlight else '#ffffff' }};{{ 'box-shadow:0 1px 3px rgba(0,0,0,.05);' if highlight }}">
+  <tr><td style="padding:20px;">{{ caller() }}</td></tr>
+</table>
+{%- endmacro -%}
+
+{%- macro title(text, word=none) -%}
+<p style="margin:0 0 20px;font-size:16px;font-weight:700;">{{ text }}{% if word %}&nbsp;&nbsp;{{ badge(word) }}{% endif %}</p>
+{%- endmacro -%}
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>{{ subject }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f6f6f4;color:#1f2328;font-family:{{ font }};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f6f4;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;font-family:{{ font }};color:#1f2328;line-height:1.5;">
+
+<tr><td style="padding:0 0 16px;">
+  <p style="margin:0 0 4px;font-size:20px;font-weight:700;">{{ heading }}</p>
+  <p style="margin:0;font-size:14px;color:#5d6166;font-family:{{ mono }};">{{ domain }}</p>
+</td></tr>
+
+<tr><td>
+{#- the overview: one line per question, the domain as the title -#}
+{%- call card() %}
+  {{ title(domain, r|overview_status) }}
+  <table role="presentation" cellpadding="0" cellspacing="0">
+    {% for passed, label, detail in r|overview %}
+    <tr>
+      <td style="padding:3px 32px 3px 0;vertical-align:top;white-space:nowrap;font-size:14px;"><span style="display:inline-block;width:18px;font-weight:700;color:{{ colours[passed|mark_verdict][0] }};">{{ passed|mark }}</span>&nbsp;{{ label }}</td>
+      <td style="padding:3px 0;vertical-align:top;font-size:14px;color:#5d6166;word-break:break-word;">{{ detail }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+{%- endcall %}
+
+{%- call card(highlight=true) %}
+  {{ title("Subject: " ~ (r.subject or "(no subject)")) }}
+  <table role="presentation" cellpadding="0" cellspacing="0">
+    {{ row("Date Received", when) }}
+    {{ row("From Address", r.from or "(none)", true) }}
+    {% if r.hop and r.hop.ip %}{{ row("Sending IP", r.hop.ip ~ (" (" ~ r.hop.rdns ~ ")" if r.hop.rdns else ""), true) }}{% endif %}
+  </table>
+  {% for w in r.warnings or [] %}
+  <p style="margin:12px 0 0;padding:12px 14px;border-radius:8px;font-size:14px;color:#8a5300;background:#fff3cd;">{{ w }}</p>
+  {% endfor %}
+  <p style="margin:16px 0 0;">
+    {{ badge(r|ptr_status, "PTR: " ~ r|ptr_status) }}&nbsp;
+    {{ badge(r.spf.result if r.spf else "none", "SPF: " ~ (r.spf.result if r.spf else "not checked")) }}&nbsp;
+    {{ badge(r.dkim|dkim_summary, "DKIM: " ~ r.dkim|dkim_summary) }}&nbsp;
+    {{ badge(r.dmarc.result if r.dmarc else "none", "DMARC: " ~ (r.dmarc.result if r.dmarc else "not checked")) }}
+  </p>
+{%- endcall %}
+
+{%- call card() %}
+  {{ title("PTR", r|ptr_status) }}
+  {% if r|ptr_status != "pass" %}<p style="margin:0 0 8px;font-size:14px;">{{ r|ptr_explanation }}</p>{% endif %}
+  {% if r.hop and r.iprev %}
+  <table role="presentation" cellpadding="0" cellspacing="0">
+    {% for label, value in r|ptr_rows %}{{ row(label, value, true) }}{% endfor %}
+  </table>
+  {% endif %}
+{%- endcall %}
+
+{%- call card() %}
+  {{ title("SPF", r.spf.result if r.spf else "not checked") }}
+  {% if r.spf %}
+  {% if r.spf.result != "pass" %}<p style="margin:0 0 8px;font-size:14px;">{{ r.spf.explanation }}</p>{% endif %}
+  {% for note in r.spf.notes or [] %}
+  <p style="margin:0 0 8px;padding:10px 12px;border-radius:8px;font-size:14px;color:#8a5300;background:#fff3cd;">Problem: {{ note }}</p>
+  {% endfor %}
+  <table role="presentation" cellpadding="0" cellspacing="0">
+    {{ row("Checked", r.spf.domain, true) }}
+    {{ row("Sending IP", r.hop.ip, true) }}
+    {% if r.spf.record %}{{ row("Record", r.spf.record, true) }}{% endif %}
+    {% if r.spf|spf_lookups %}{{ row("DNS lookups", r.spf|spf_lookups) }}{% endif %}
+    {% if r.spf.result not in ("pass", "none") %}{{ row("Detail", r.spf.detail) }}{% endif %}
+  </table>
+  {% else %}
+  <p style="margin:0;font-size:14px;">Not checked: the sending server couldn't be identified.</p>
+  {% endif %}
+{%- endcall %}
+
+{%- call card() %}
+  {{ title("DKIM", r.dkim|dkim_summary) }}
+  {% if not r.dkim %}<p style="margin:0;font-size:14px;">The message has no DKIM signature.</p>{% endif %}
+  {% for s in r.dkim or [] %}
+  <p style="margin:{{ '0' if loop.first else '16px' }} 0 6px;font-size:14px;">{{ badge(s.result) }}&nbsp; signed by <strong style="font-family:{{ mono }};">{{ s.domain }}</strong></p>
+  {% if s.result != "pass" %}<p style="margin:0 0 8px;font-size:14px;">{{ s.explanation }}</p>{% endif %}
+  <table role="presentation" cellpadding="0" cellspacing="0">
+    {{ row("Selector", s.selector ~ "._domainkey." ~ s.domain, true) }}
+    {% if s.reason and s.result != "pass" %}{{ row("Reason", s.reason) }}{% endif %}
+  </table>
+  {% endfor %}
+{%- endcall %}
+
+{%- call card(last=true) %}
+  {{ title("DMARC", r.dmarc.result if r.dmarc else "not checked") }}
+  {% if r.dmarc %}
+  {% if r.dmarc.result != "pass" %}<p style="margin:0 0 8px;font-size:14px;">{{ r.dmarc.explanation }}</p>{% endif %}
+  {% for note in r.dmarc.notes or [] %}
+  <p style="margin:0 0 8px;padding:10px 12px;border-radius:8px;font-size:14px;color:#8a5300;background:#fff3cd;">Problem: {{ note }}</p>
+  {% endfor %}
+  <table role="presentation" cellpadding="0" cellspacing="0">
+    {% if r.dmarc.record %}
+    {{ row("Record", "_dmarc." ~ r.dmarc.record_domain ~ ": " ~ r.dmarc.record, true) }}
+    {{ row("Policy", r.dmarc.policy) }}
+    {% endif %}
+    {{ row("SPF aligned", "yes" if r.dmarc.spf_aligned else "no") }}
+    {{ row("DKIM aligned", "yes" if r.dmarc.dkim_aligned else "no") }}
+  </table>
+  {% else %}
+  <p style="margin:0;font-size:14px;">Not checked: the message needs exactly one From: address.</p>
+  {% endif %}
+{%- endcall %}
+</td></tr>
+
+{% if results_url %}
+<tr><td style="padding:16px 0 0;">
+  <p style="margin:0;font-size:14px;color:#5d6166;">You can also view this report at
+    <a href="{{ results_url }}" style="color:#1f2328;font-weight:700;">{{ results_url }}</a> for up to
+    {{ unviewed_hours }} hours. The online copy is deleted {{ viewed_minutes }} minutes after the first time
+    it's viewed.</p>
+</td></tr>
+{% endif %}
+
+{% if docs_url %}
+<tr><td style="padding:16px 0 0;">
+  <p style="margin:0;font-size:14px;color:#5d6166;">What the report means, check by check:
+    <a href="{{ docs_url }}" style="color:#1f2328;font-weight:700;">{{ docs_url }}</a></p>
+</td></tr>
+{% endif %}
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

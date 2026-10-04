@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+{% if missing_page %}<p class="empty">That page doesn't exist.{% if docs_enabled %} Try the <a href="{{ url_for('docs.index') }}">documentation</a>, or look up a report below.{% endif %}</p>{% endif %}
+{% include "_form.html" %}
+{% endblock %}

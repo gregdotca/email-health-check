@@ -1,0 +1,92 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<h2 id="at-a-glance">At a glance</h2>
+<p>The summary (sometimes called the Exec Summary) is the verdict on a domain's email in three lines. It's the
+    first box in every report, and the emailed report also attaches it as a picture so it can be shared.</p>
+{{ m.overview(examples["passed"], titled=True) }}
+<dl class="docs-defs">
+    <dt>Can send email</dt><dd>The test reached the check.</dd>
+    <dt>Can receive email</dt><dd>The domain has MX records naming its mail servers, so mail (including the report) can be delivered to it.</dd>
+    <dt>Is authenticated</dt><dd>SPF decides yes or no. DKIM and DMARC are named when they pass too, and flagged
+        when they're set up but failing.</dd>
+</dl>
+
+<h2 id="marks">Marks</h2>
+<div class="card overview docs-legend">
+    <ul>
+        <li><span class="mark good">{{ true|mark }}</span> <span class="label">Passed</span> <span class="detail">Nothing to do.</span></li>
+        <li><span class="mark bad">{{ false|mark }}</span> <span class="label">Failed</span> <span class="detail">Needs fixing.</span></li>
+        <li><span class="mark warn">{{ "warn"|mark }}</span> <span class="label">Problem</span> <span class="detail">A problem was found that needs attention.</span></li>
+        <li><span class="mark neutral">{{ none|mark }}</span> <span class="label">Unknown</span> <span class="detail">Couldn't be checked, for example because of a DNS error.</span></li>
+    </ul>
+</div>
+
+<h2 id="status">Overall status</h2>
+<table class="docs-table">
+    <thead><tr><th>Status</th><th>When</th></tr></thead>
+    <tbody>
+        <tr><td><span class="badge good">All Tests Passed</span></td><td>All three lines are {{ true|mark }}.</td></tr>
+        <tr><td><span class="badge bad">Needs Attention</span></td><td>At least one line is {{ false|mark }} or {{ "warn"|mark }}.</td></tr>
+        <tr><td><span class="badge warn">Incomplete</span></td><td>Nothing failed, but at least one line is {{ none|mark }}.</td></tr>
+    </tbody>
+</table>
+<p>On this website the status is never All Tests Passed, because only the email can confirm the report was
+    delivered (see <a href="{{ url_for('docs.page', slug='view-online') }}#email-vs-web">The website and the email</a>).</p>
+
+<h2 id="send">Can send email</h2>
+<table class="docs-table marks">
+    <tbody>
+        <tr><td class="mark good">{{ true|mark }}</td><td>The test message reached the check. If you're reading a report, this is always the case.</td></tr>
+    </tbody>
+</table>
+
+<h2 id="receive">Can receive email</h2>
+<table class="docs-table marks">
+    <tbody>
+        <tr><td class="mark good">{{ true|mark }}</td><td>The domain has MX records, and the emailed report is proof that mail reaches it.</td></tr>
+        <tr><td class="mark bad">{{ false|mark }}</td><td>The domain has no MX records, or a "null MX" record saying it accepts no mail. (Some senders fall back to a domain's address records when it has no MX records, but that isn't something to rely on, so it isn't tested.)</td></tr>
+        <tr><td class="mark neutral">{{ none|mark }}</td><td>A DNS error stopped the MX lookup. Also shown on this website when the domain has MX records, because only the email can confirm the reply arrived.</td></tr>
+    </tbody>
+</table>
+
+<h2 id="authenticated">Is authenticated</h2>
+<p><strong>SPF alone decides yes or no.</strong> A domain with no DKIM or DMARC at all can still pass. When
+    SPF passes, the line names everything that passed, for example "Yes (SPF, DKIM, DMARC)". DKIM is only named
+    when a signature for the From: domain passes (a subdomain such as <code>mail.example.com</code> counts for
+    <code>example.com</code>).</p>
+<table class="docs-table marks">
+    <tbody>
+        <tr><td class="mark good">{{ true|mark }}</td><td>SPF passes, nothing that's set up is failing, and every check finished.</td></tr>
+        <tr><td class="mark bad">{{ false|mark }}</td><td>SPF doesn't pass: <code>none</code>, <code>neutral</code>, <code>softfail</code>, <code>fail</code> or <code>permerror</code>. This outweighs everything else.</td></tr>
+        <tr><td class="mark warn">{{ "warn"|mark }}</td><td>SPF doesn't fail, but a problem was found:
+            <ul>
+                <li>a DKIM signature or DMARC fails, or</li>
+                <li>the message is DKIM-signed only by another domain (usually the mail service's), not the From: domain, or</li>
+                <li>DMARC is set up but the message has no DKIM signature, or</li>
+                <li>the SPF or DMARC record has a "Problem:" note.</li>
+            </ul></td></tr>
+        <tr><td class="mark neutral">{{ none|mark }}</td><td>No problem was found, but a check couldn't finish: a
+            DNS error (including one that stopped SPF), more than {{ v.max_signatures }} DKIM signatures (the rest
+            aren't checked), or an SPF record whose DNS lookups couldn't all be counted.</td></tr>
+    </tbody>
+</table>
+<p>Whatever the mark, the line lists what it found, for example "Yes (SPF), but no DKIM signature for
+    example.com". When the test was sent by logging in to the receiving mail server, this line shows
+    {{ none|mark }}, or {{ "warn"|mark }} if a record or signature has a problem anyway: see <a href="{{ url_for('docs.page', slug='troubleshooting') }}#submitted">Troubleshooting</a>.</p>
+
+<h2 id="examples">Examples</h2>
+<p>Three more, drawn by the same rules as real reports:</p>
+<figure class="docs-example-figure">
+    {{ m.overview(examples["esp-only"]) }}
+    <figcaption>The mail service signs with its own domain. Set up DKIM for example.com with the service.</figcaption>
+</figure>
+<figure class="docs-example-figure">
+    {{ m.overview(examples["no-spf"]) }}
+    <figcaption>The sending server isn't in the SPF record (<code>~all</code>). Add it to the record.</figcaption>
+</figure>
+<figure class="docs-example-figure">
+    {{ m.overview(examples["dns-error"]) }}
+    <figcaption>A DNS error stopped the MX lookup. Send another test.</figcaption>
+</figure>
+{% endblock %}

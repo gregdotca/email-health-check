@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{#- The page an email link opens: a button only, so link scanners can't "view" (and start the clock on)
+    the results. The same for every well-formed link, whether or not its result still exists. -#}
+{% block content %}
+<form method="post" class="lookup">
+    <div class="row">
+        <button type="submit" autofocus>View Report</button>
+    </div>
+</form>
+{% endblock %}

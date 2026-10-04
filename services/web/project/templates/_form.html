@@ -1,0 +1,8 @@
+<form method="post" action="/" class="lookup">
+    <div class="row">
+        <input id="address" name="address" type="email" aria-label="Address you sent from" required maxlength="320" autocomplete="email"
+               placeholder="you@example.com" value="{{ address or '' }}" {% if not address %}autofocus{% endif %}>
+        <button type="submit">{{ button or "View Report" }}</button>
+    </div>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+</form>

@@ -1,0 +1,72 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<h2 id="what-it-proves">What it proves</h2>
+<p>SPF (Sender Policy Framework) lets a domain publish, in a DNS TXT record, which servers may send its mail.
+    A typical record looks like this:</p>
+<pre>v=spf1 include:_spf.mailservice.example.net ip4:192.0.2.25 -all</pre>
+<p>The check asks whether the server that delivered the test is allowed to send for the domain of the
+    <strong>envelope sender</strong> (the Return-Path, where bounces go). That's often the same domain as the
+    From: address, but a mail service may use its own. <a href="{{ url_for('docs.page', slug='dmarc') }}#alignment">DMARC
+    alignment</a> is what ties SPF to the From: domain.</p>
+<p>For a bounce (an empty envelope sender), SPF checks the name the sending server gave when it connected (its
+    HELO name) instead.</p>
+<p>SPF is what decides the summary's "Is authenticated" line.</p>
+
+<h2 id="results">Results</h2>
+<table class="docs-table">
+    <thead><tr><th>Result</th><th>Meaning</th></tr></thead>
+    <tbody>
+        {% for word in ("pass", "fail", "softfail", "neutral", "none", "permerror", "temperror") %}
+        {{ m.result(word, explain.spf[word]) }}
+        {% endfor %}
+    </tbody>
+</table>
+<p>"Not checked" means the server that delivered the test couldn't be identified, so there was nothing to
+    check. SPF also allows at most two DNS lookups that find nothing ("void" lookups). More is a
+    <code>permerror</code> even with fewer than {{ v.max_lookups }} lookups in all, and the Detail row says so.
+    A check that takes longer than 20 seconds in all (slow or unanswered DNS) stops with
+    <code>temperror</code>, and a term over 512 characters in the record, or in one it includes, is a
+    <code>permerror</code>.</p>
+
+<h2 id="rows">What the box shows</h2>
+<dl class="docs-defs">
+    <dt>Checked</dt><dd>The domain whose SPF record was used (the envelope sender's).</dd>
+    <dt>Sending IP</dt><dd>The server that was checked against the record.</dd>
+    <dt>Record</dt><dd>The domain's SPF record, as published.</dd>
+    <dt>DNS lookups</dt><dd>How many DNS lookups the whole record needs, out of the {{ v.max_lookups }} SPF allows,
+        counting every <code>include</code>, <code>a</code>, <code>mx</code>, <code>ptr</code>,
+        <code>exists</code> and <code>redirect</code> (ignored, and not counted, when the record has an
+        <code>all</code>), and the records they include. Nothing after <code>all</code> is counted, as it's
+        never reached. "At least" means the count couldn't finish.</dd>
+    <dt>Detail</dt><dd>For a result other than pass or none: the exact reason given by the check.</dd>
+</dl>
+
+<h2 id="problems">Problem notes</h2>
+<p>The check looks at the whole record, not just the part this test needed. A record can pass for one server
+    and still be broken for others, so these get a "Problem:" note even when the test passed:</p>
+<ul>
+    <li><strong>Too many DNS lookups.</strong> Over {{ v.max_lookups }}, receivers give
+        <code>permerror</code> for any server not matched within the first {{ v.max_lookups }}, so some of the
+        domain's mail fails. {{ v.near_limit }} or {{ v.max_lookups }} gets a note too: there's little room left, so
+        another include, or a change at a provider, could push it over.</li>
+    <li><strong>A broken include or redirect.</strong> A domain the record includes has no SPF record, more than
+        one, or one with a syntax error.</li>
+</ul>
+<p>A "Problem:" note makes the summary's "Is authenticated" line {{ "warn"|mark }} (unless SPF has
+    already made it {{ false|mark }}).</p>
+
+<h2 id="fixing">Fixing it</h2>
+<ul>
+    <li><strong>fail, softfail or neutral</strong>: add the sending server to the record. For a mail service, add
+        the <code>include:</code> it gives in its setup instructions.</li>
+    <li><strong>none</strong>: publish an SPF record listing every server and service that sends your mail, ending
+        in <code>-all</code> or <code>~all</code>.</li>
+    <li><strong>permerror</strong>: fix the record's syntax, and make sure the domain has exactly one record
+        starting <code>v=spf1</code>.</li>
+    <li><strong>Too many lookups</strong>: remove includes for services you no longer use, replace <code>a</code>
+        and <code>mx</code> with <code>ip4:</code>/<code>ip6:</code> ranges where they don't change, or move some
+        mail to a subdomain with its own record.</li>
+    <li><strong>temperror</strong>: send another test. If it keeps happening, check the domain's DNS servers.</li>
+</ul>
+{% endblock %}

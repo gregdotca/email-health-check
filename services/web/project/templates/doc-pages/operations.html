@@ -1,0 +1,84 @@
+{% extends "doc-pages/page.html" %}
+{% block body %}
+<h2 id="logs">Logs</h2>
+<pre>docker compose logs -f poller
+docker compose logs -f web</pre>
+<p>The logs show counts and reasons, never addresses: for each test, whether a report was sent and, if not,
+    why. Each check of the mailbox handles up to {{ v.max_per_poll }} messages, and any more wait for the next
+    one.</p>
+
+<h2 id="updating">Updating</h2>
+<pre>git pull
+docker compose up -d --build</pre>
+<p>Check the changelog and <code>.env.example</code> for new settings first.</p>
+
+<h2 id="data">Data</h2>
+<p>The SQLite database lives in the Compose volume <code>data</code>. It only holds short-lived reports and
+    rate-limit counters, which expire on their own, so it needs no backups. <code>docker compose down -v</code>
+    removes it along with the containers.</p>
+
+<h2 id="log-messages">Log messages</h2>
+<dl class="docs-defs">
+    <dt>The service stops at startup</dt>
+    <dd>The log names the setting that's missing or invalid. Fix it in <code>.env</code>, then run
+        <code>docker compose up -d</code> again.</dd>
+    <dt>Nothing in the log for a test</dt>
+    <dd>It may still be waiting for the next check of the mailbox, or it never reached the mailbox.
+        <code>IMAP error</code> or <code>connection error</code> lines mean the poller can't log in or connect.
+        It tries again after 30 seconds, or after 5 minutes when the server reports a failed login
+        (<code>AUTHENTICATIONFAILED</code>), so a wrong password doesn't get its IP address blocked. Otherwise, check that the test was delivered (a spam filter on the receiving server may have rejected or
+        deleted it).</dd>
+    <dt><code>no results email: …</code></dt>
+    <dd>The test was deliberately not answered. The reason says why:
+        <ul>
+            <li><code>envelope sender is at a different domain</code>: the report only goes to the From: address
+                when the envelope sender is at the same domain</li>
+            <li><code>automatic message</code>, <code>bulk or list message</code>, <code>mailing list message</code>,
+                <code>bounce (empty envelope sender)</code> or <code>system or no-reply address</code>: automatic
+                mail is never answered</li>
+            <li><code>addressed to this tool</code>: mail from the test address's own domain isn't answered</li>
+            <li><code>rate limit reached</code>: too many reports to that address in the last hour or 24 hours, or
+                to everyone in the last 24 hours (the <code>MAIL_PER_*</code> settings)</li>
+        </ul>
+    </dd>
+    <dt><code>sending the results email failed …</code></dt>
+    <dd>The SMTP service refused the email or couldn't be reached. Temporary failures are retried
+        {{ v.max_attempts - 1 }} times, at least {{ v.retry_schedule }} minutes apart. Test the login with the <code>--check-smtp</code> command in
+        <a href="{{ url_for('docs.page', slug='setup') }}#setup">Setup</a>.</dd>
+    <dt>Reports say the receiving mail server's record couldn't be found</dt>
+    <dd><code>TRUSTED_MX_HOSTS</code> doesn't match the names your server writes after <code>by</code> in its
+        <code>Received:</code> headers.</dd>
+    <dt><code>analysis failed …</code></dt>
+    <dd>Something in the message couldn't be checked. It's deleted without a report email. With the website on,
+        a short report saying so is kept online.</dd>
+    <dt><code>handling a message failed …</code></dt>
+    <dd>An unexpected error interrupted the work on a message, and the poller deleted it. A report may already
+        have been saved online or emailed: look it up, and check for a <code>sent a results email</code> line.</dd>
+    <dt><code>message too large …</code></dt>
+    <dd>A test over {{ v.max_mb }} MB was deleted without being checked.</dd>
+    <dt>Other warnings</dt>
+    <dd>
+        <ul>
+            <li><code>saving the result for the web page failed</code>: the report can't be looked up online (it's
+                still emailed, if the reply rules and limits allow). Check the database's storage.</li>
+            <li><code>updating the saved result failed</code>: the report online may wrongly say a report was
+                emailed.</li>
+            <li><code>checking the sending limits failed …; will retry</code>: the database was busy, so the
+                message is kept and tried again.</li>
+            <li><code>building the results email failed</code>: the email couldn't be put together. It isn't
+                retried, and the message is deleted.</li>
+            <li><code>drawing the summary image failed</code>: the email was sent without the picture.</li>
+            <li><code>the email was accepted, but closing the connection failed</code>: the email was sent, and it
+                isn't sent again.</li>
+            <li><code>couldn't list the mail folders</code>, <code>couldn't get a message's size</code>,
+                <code>couldn't flag a handled message for deletion</code>, <code>expunge failed</code>: a mail
+                server hiccup. The poller tries again on the next check. It remembers what it has answered only
+                while it runs, so a restart before a message is deleted can answer it again.</li>
+            <li><code>cleaning up expired results failed</code>: expired reports can't be looked up, but stay in
+                the database until a clean-up succeeds.</li>
+        </ul>
+    </dd>
+    <dt>Reports land in spam</dt>
+    <dd>The sending domain's SPF and DKIM need to include your SMTP service.</dd>
+</dl>
+{% endblock %}

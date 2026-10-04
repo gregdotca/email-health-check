@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+.idea/
+.pytest_cache/
+data/
+*.db
+*.db-*
+*.sqlite3
+*.sqlite3-*
+.env
+.env.*
+env.*
+!.env.example
+# local Docker changes (networks, volumes, labels) go here, never in docker-compose.yml
+docker-compose.override.yml

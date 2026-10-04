@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{#- The boxes say exactly what the results email says (healthcheck/templates/email.html); keep them in step. -#}
+{#- a link from each box to its page in the documentation (when DOCS_ENABLED) -#}
+{% macro help(slug, name) -%}
+{% if docs_enabled %}<a class="box-help" href="{{ url_for('docs.page', slug=slug) }}" aria-label="What does this mean? ({{ name }})">What does this mean?</a>{% endif %}
+{%- endmacro %}
+{% block content %}
+{% with button="Check again" %}{% include "_form.html" %}{% endwith %}
+
+{% if not r %}
+<section class="empty">
+    <p><strong>{{ missing or "No report for that address" }}</strong></p>
+</section>
+{% else %}
+<p class="banner" role="alert">This report will self-destruct in {{ r.minutes_left }} minute{{ "s" if r.minutes_left != 1 }}.</p>
+{# a data: URL, so no second request (and no second lookup) is needed. No Exec Summary picture here: the
+   web page's can never show the full check, so it's only attached to the email. #}
+<a class="download-button" download="{{ r|headers_filename }}"
+   href="data:text/plain;charset=utf-8,{{ r.headers|urlencode }}">&#x2193; Download the full email headers (.txt)</a>
+{% if not r.error %}
+<section class="card overview">
+    <h2>{{ r|sender_domain }} <span class="badge {{ r|overview_status(web=True)|verdict }}">{{ r|overview_status(web=True) }}</span>{{ help("summary", "the summary") }}</h2>
+    <ul>
+        {% for passed, label, detail in r|overview(web=True) %}
+        <li><span class="mark {{ passed|mark_verdict }}">{{ passed|mark }}</span> <span class="label">{{ label }}</span> <span class="detail">{{ detail }}</span></li>
+        {% endfor %}
+    </ul>
+    {% if r.no_reply %}
+    <p class="info full-check">No report was emailed for this test (for example, it came through a mailing list
+        or an email marketing service, or a sending limit was reached), so receiving wasn't tested. To check it,
+        send a test straight from your own mailbox, later if a limit was reached.</p>
+    {% else %}
+    <p class="info full-check">For the full check, see the Exec Summary in the emailed report.</p>
+    {% endif %}
+</section>
+{% endif %}
+<article class="card summary-card">
+    <header>
+        <h2>Subject: {{ r.subject or "(no subject)" }}</h2>
+        <dl class="meta">
+            <dt>Date Received</dt><dd>{{ r|received }}</dd>
+            <dt>From Address</dt><dd class="mono">{{ r.from or "(none)" }}</dd>
+            {% if r.hop and r.hop.ip %}<dt>Sending IP</dt><dd class="mono">{{ r.hop.ip }}{% if r.hop.rdns %} ({{ r.hop.rdns }}){% endif %}</dd>{% endif %}
+        </dl>
+    </header>
+    {% if r.error %}
+    <p class="callout bad">{{ r.error }}</p>
+    {% else %}
+    {% for w in r.warnings %}<p class="callout warn">{{ w }}</p>{% endfor %}
+    <div class="summary">
+        <span class="badge {{ r|ptr_status|verdict }}">PTR: {{ r|ptr_status }}</span>
+        <span class="badge {{ (r.spf.result if r.spf else 'none')|verdict }}">SPF: {{ r.spf.result if r.spf else "not checked" }}</span>
+        <span class="badge {{ r.dkim|dkim_summary|verdict }}">DKIM: {{ r.dkim|dkim_summary }}</span>
+        <span class="badge {{ (r.dmarc.result if r.dmarc else 'none')|verdict }}">DMARC: {{ r.dmarc.result if r.dmarc else "not checked" }}</span>
+    </div>
+    {% endif %}
+</article>
+
+{% if not r.error %}
+<section class="card">
+    <h3>PTR <span class="badge {{ r|ptr_status|verdict }}">{{ r|ptr_status }}</span>{{ help("ptr", "PTR") }}</h3>
+    {% if r|ptr_status != "pass" %}<p>{{ r|ptr_explanation }}</p>{% endif %}
+    {% if r.hop and r.iprev %}
+    <dl>
+        {% for label, value in r|ptr_rows %}<dt>{{ label }}</dt><dd class="mono">{{ value }}</dd>{% endfor %}
+    </dl>
+    {% endif %}
+</section>
+
+<section class="card">
+    <h3>SPF <span class="badge {{ (r.spf.result if r.spf else 'none')|verdict }}">{{ r.spf.result if r.spf else "not checked" }}</span>{{ help("spf", "SPF") }}</h3>
+    {% if r.spf %}
+    {% if r.spf.result != "pass" %}<p>{{ r.spf.explanation }}</p>{% endif %}
+    {% for note in r.spf.notes or [] %}<p class="callout warn">Problem: {{ note }}</p>{% endfor %}
+    <dl>
+        <dt>Checked</dt><dd class="mono">{{ r.spf.domain }}</dd>
+        <dt>Sending IP</dt><dd class="mono">{{ r.hop.ip }}</dd>
+        {% if r.spf.record %}<dt>Record</dt><dd class="mono">{{ r.spf.record }}</dd>{% endif %}
+        {% if r.spf|spf_lookups %}<dt>DNS lookups</dt><dd>{{ r.spf|spf_lookups }}</dd>{% endif %}
+        {% if r.spf.result not in ("pass", "none") %}<dt>Detail</dt><dd>{{ r.spf.detail }}</dd>{% endif %}
+    </dl>
+    {% else %}
+    <p>Not checked: the sending server couldn't be identified.</p>
+    {% endif %}
+</section>
+
+<section class="card">
+    <h3>DKIM <span class="badge {{ r.dkim|dkim_summary|verdict }}">{{ r.dkim|dkim_summary }}</span>{{ help("dkim", "DKIM") }}</h3>
+    {% if not r.dkim %}<p>The message has no DKIM signature.</p>{% endif %}
+    {% for s in r.dkim %}
+    <div class="sig">
+        <p><span class="badge {{ s.result|verdict }}">{{ s.result }}</span> signed by <strong class="mono">{{ s.domain }}</strong></p>
+        {% if s.result != "pass" %}<p>{{ s.explanation }}</p>{% endif %}
+        <dl>
+            <dt>Selector</dt><dd class="mono">{{ s.selector }}._domainkey.{{ s.domain }}</dd>
+            {% if s.reason and s.result != "pass" %}<dt>Reason</dt><dd>{{ s.reason }}</dd>{% endif %}
+        </dl>
+    </div>
+    {% endfor %}
+</section>
+
+<section class="card">
+    <h3>DMARC <span class="badge {{ (r.dmarc.result if r.dmarc else 'none')|verdict }}">{{ r.dmarc.result if r.dmarc else "not checked" }}</span>{{ help("dmarc", "DMARC") }}</h3>
+    {% if r.dmarc %}
+    {% if r.dmarc.result != "pass" %}<p>{{ r.dmarc.explanation }}</p>{% endif %}
+    {% for note in r.dmarc.notes or [] %}<p class="callout warn">Problem: {{ note }}</p>{% endfor %}
+    <dl>
+        {% if r.dmarc.record %}
+        <dt>Record</dt><dd class="mono">_dmarc.{{ r.dmarc.record_domain }}: {{ r.dmarc.record }}</dd>
+        <dt>Policy</dt><dd>{{ r.dmarc.policy }}</dd>
+        {% endif %}
+        <dt>SPF aligned</dt><dd>{{ "yes" if r.dmarc.spf_aligned else "no" }}</dd>
+        <dt>DKIM aligned</dt><dd>{{ "yes" if r.dmarc.dkim_aligned else "no" }}</dd>
+    </dl>
+    {% else %}
+    <p>Not checked: the message needs exactly one From: address.</p>
+    {% endif %}
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

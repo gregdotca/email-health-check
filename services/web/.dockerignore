@@ -1,0 +1,12 @@
+# Keep local files out of the image: caches, databases and any env file (at any depth)
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/*.sqlite3*
+**/*.db-*
+**/*.db
+**/.env
+**/.env.*
+**/env.*
+# other Dockerfiles: only Dockerfile itself is needed to build
+Dockerfile.*

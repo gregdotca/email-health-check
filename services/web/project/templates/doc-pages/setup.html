@@ -1,0 +1,86 @@
+{% extends "doc-pages/page.html" %}
+{% block body %}
+<h2 id="requirements">Requirements</h2>
+<ul>
+    <li><strong>A mailbox used only for tests</strong>, reachable over IMAP with TLS on port 993 (not
+        configurable) with a username and password. The test address can be the mailbox's own address or an
+        alias delivered into it.</li>
+    <li><strong>A receiving mail server that writes Exim-style <code>Received:</code> headers</strong> (see
+        <a href="{{ url_for('docs.page', slug='how-it-works') }}#trust">What's trusted</a>).</li>
+    <li><strong>An SMTP service to send the reports</strong>, with STARTTLS (usually port 587), or without TLS
+        if <code>SENDING_EMAIL_USE_TLS=False</code>. Implicit TLS (usually port 465) isn't supported. Your sending
+        domain's SPF and DKIM should include it, so the reports themselves are delivered.</li>
+    <li><strong>Docker with Compose</strong>, on a host that can reach your IMAP and SMTP servers and make DNS
+        lookups.</li>
+    <li>For the optional website: a hostname, and a reverse proxy (Caddy, nginx or similar) to serve it over
+        HTTPS.</li>
+</ul>
+<p class="callout note"><strong>Use a dedicated mailbox.</strong> The poller checks and deletes every message in
+    the folders it reads (old, already-read and sent to other aliases alike), and it doesn't pick out mail for the
+    test address. With the website on, each one's headers can also be looked up for a while.</p>
+<p>IMAP, and SMTP with STARTTLS, check the server's certificate. Logins use passwords (an app password, if your
+    provider requires one), not OAuth. <code>SENDING_EMAIL_USE_TLS=False</code> turns off SMTP encryption,
+    including for the login, so use it only for a trusted local relay.</p>
+
+<h2 id="setup">Setup</h2>
+<ol class="docs-steps">
+    <li>
+        <h3>Get the code</h3>
+<pre>git clone https://github.com/gregdotca/email-health-check.git
+cd email-health-check
+cp .env.example .env</pre>
+    </li>
+    <li>
+        <h3>Fill in <code>.env</code></h3>
+        <p>Set the mailbox, SMTP and <code>TRUSTED_MX_HOSTS</code> settings (all of them are described in
+            <a href="{{ url_for('docs.page', slug='settings') }}">Settings</a>). For <code>TRUSTED_MX_HOSTS</code>,
+            use the names your receiving server writes after <code>by</code> in the <code>Received:</code> headers of
+            mail it accepts (usually its MX host names), including any backup MX. If you're not sure, send yourself
+            a message and look at its headers.</p>
+    </li>
+    <li>
+        <h3>Check the settings</h3>
+        <p>This checks the settings, then connects to the SMTP server (starting TLS and logging in, if set up),
+            without sending anything:</p>
+<pre>docker compose run --rm --build poller python -m healthcheck.poller --check-smtp</pre>
+        <p>A missing or invalid setting stops it with a message naming the setting. It doesn't test the IMAP
+            login: the poller's log shows that once it's running.</p>
+    </li>
+    <li>
+        <h3>Start it</h3>
+<pre>docker compose up -d --build</pre>
+    </li>
+    <li>
+        <h3>Send a test</h3>
+        <p>Send any email to the test address. The report should arrive within a minute or so. If it doesn't,
+            see <a href="{{ url_for('docs.page', slug='operations') }}#log-messages">Log messages</a>.</p>
+    </li>
+</ol>
+<p>To try it without changing anything, set <code>DRY_RUN=True</code>: messages are checked (and saved, with the
+    website), but nothing is sent, flagged or deleted.</p>
+
+<h2 id="web-or-email">With or without the website</h2>
+<dl class="docs-defs">
+    <dt>With the website</dt>
+    <dd>Set <code>PUBLIC_URL</code> (for example <code>https://check.example.com</code>) and
+        <code>COMPOSE_PROFILES=web</code>, and point your reverse proxy at <code>WEB_BIND</code> (default
+        <code>127.0.0.1:8080</code>). Keep <code>WEB_BIND</code> off the public internet: the proxy is the way in.
+        These docs are on at <code>/docs/</code> unless you set <code>DOCS_ENABLED=False</code>.</dd>
+    <dt>Email-only</dt>
+    <dd>Leave <code>PUBLIC_URL</code> and <code>COMPOSE_PROFILES</code> empty. Only the poller runs, the emails have
+        no link to a website, and no reports are kept.</dd>
+</dl>
+<p>To switch a running copy to email-only, stop the website first with
+    <code>docker compose --profile web stop web</code>, then clear both settings and run
+    <code>docker compose up -d</code>. Reports already saved expire as usual.</p>
+
+<h2 id="docker">Changing how Docker runs it</h2>
+<p>Everything is set in <code>.env</code>, so you shouldn't need to edit <code>docker-compose.yml</code>. To change
+    how Docker runs it on your host (joining a network, a reverse proxy's labels, a bind-mounted data folder,
+    logging), put those changes in a <code>docker-compose.override.yml</code> next to it. Compose merges it in
+    automatically, and git ignores it.</p>
+<p>To run more than one copy on the same host, give each its own folder (a separate clone, with its own
+    <code>.env</code>), <code>CONTAINER_NAME</code> and <code>WEB_BIND</code>. Compose names each copy after its
+    folder, which keeps their services and data apart. If two folders have the same name, give one a project
+    name of its own with <code>COMPOSE_PROJECT_NAME</code> in its <code>.env</code>.</p>
+{% endblock %}

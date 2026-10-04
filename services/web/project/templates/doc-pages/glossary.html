@@ -1,0 +1,74 @@
+{% extends "doc-pages/page.html" %}
+{% block body %}
+<h2 id="terms">Terms</h2>
+<dl class="docs-glossary">
+    <dt id="alignment">Alignment</dt>
+    <dd>Whether the domain that passed SPF or DKIM matches the From: domain. Relaxed alignment (the default)
+        lets subdomains match. See <a href="{{ url_for('docs.page', slug='dmarc') }}#alignment">DMARC</a>.</dd>
+
+    <dt id="dkim">DKIM</dt>
+    <dd>DomainKeys Identified Mail: a signature added to a message by the sending domain, checked against a public
+        key in its DNS. See <a href="{{ url_for('docs.page', slug='dkim') }}">DKIM</a>.</dd>
+
+    <dt id="dmarc">DMARC</dt>
+    <dd>A policy published by the From: domain saying what receivers should do with mail that doesn't pass SPF or
+        DKIM for that domain. See <a href="{{ url_for('docs.page', slug='dmarc') }}">DMARC</a>.</dd>
+
+    <dt id="dns">DNS record</dt>
+    <dd>An entry in a domain's DNS. SPF, DKIM keys and DMARC are all TXT records, while MX and PTR records have their own
+        types. Changes take effect once the old record's TTL (time to live) has passed.</dd>
+
+    <dt id="envelope-sender">Envelope sender</dt>
+    <dd>The address a sending server gives when it delivers a message, where bounces are sent. It's saved in the
+        message as the <code>Return-Path</code> header. It can differ from the From: address, as mail services often
+        use their own domain for it.</dd>
+
+    <dt id="from">From: address</dt>
+    <dd>The sender address people see in their mail program. It's the domain DMARC protects and the one this
+        report is about.</dd>
+
+    <dt id="headers">Headers</dt>
+    <dd>The lines at the top of a message (From:, Subject:, Received:, DKIM-Signature: and many more) that say who
+        sent it and how it travelled. Most mail programs can show them ("Show original" or "View source").</dd>
+
+    <dt id="helo">HELO</dt>
+    <dd>The name a sending server gives when it connects. The sender chooses it, so it proves nothing on its
+        own.</dd>
+
+    <dt id="mail-service">Mail service</dt>
+    <dd>A company that sends mail for your domain: your mailbox provider, a newsletter or marketing service, a
+        ticket system. Each one sends from its own servers, so test each one separately. Its servers need to be in
+        the SPF record of the envelope sender's domain (yours, unless the service uses its own), and it should
+        sign with DKIM for your domain.</dd>
+
+    <dt id="mx">MX record</dt>
+    <dd>Names the servers that accept mail for a domain. A domain that receives mail should have them: the
+        health check looks for them, and doesn't test the old fallback to a domain's address records. A "null
+        MX" record says the domain accepts no mail at all.</dd>
+
+    <dt id="org-domain">Organizational domain</dt>
+    <dd>The registered domain a name belongs to: <code>example.com</code> for <code>mail.example.com</code>, or
+        <code>example.co.uk</code> for <code>mail.example.co.uk</code>.</dd>
+
+    <dt id="ptr">PTR record (reverse DNS)</dt>
+    <dd>Gives an IP address a name. "Forward-confirmed" means that name also points back to the same IP address.
+        See <a href="{{ url_for('docs.page', slug='ptr') }}">PTR</a>.</dd>
+
+    <dt id="received">Received: header</dt>
+    <dd>A line each mail server adds when it accepts a message, saying where it came from. Only the one added by
+        the receiving mail server is trusted: anything older was written by the sender's side and could be
+        forged.</dd>
+
+    <dt id="selector">Selector</dt>
+    <dd>The name a DKIM signature uses to say which key to look up, at
+        <code><em>selector</em>._domainkey.<em>domain</em></code>. A domain can have several keys, one per selector.</dd>
+
+    <dt id="spf">SPF</dt>
+    <dd>Sender Policy Framework: a DNS record listing the servers allowed to send a domain's mail. See
+        <a href="{{ url_for('docs.page', slug='spf') }}">SPF</a>.</dd>
+
+    <dt id="temperror">temperror and permerror</dt>
+    <dd>A <code>temperror</code> is temporary, usually a DNS server that didn't answer: try again. A
+        <code>permerror</code> is permanent: the record is broken and needs fixing.</dd>
+</dl>
+{% endblock %}

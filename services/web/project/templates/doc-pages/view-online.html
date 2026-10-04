@@ -1,0 +1,63 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<p>Each test's report is also kept on this website for a short time. It's the same report as the email,
+    and it's there as soon as the test has been checked, even when no report was emailed.</p>
+
+<h2 id="look-up">Look up by address</h2>
+<ol>
+    <li>Go to the <a href="/">home page</a>.</li>
+    <li>Enter the address you sent the test <em>from</em> (not the test address) and press <strong>View Report</strong>.
+        The envelope sender (Return-Path) address works too, but some services share one between many senders,
+        so the From: address is the safer choice. Capital letters don't matter.</li>
+</ol>
+<p>You'll see the most recent report for that address. Viewing it deletes any older reports for the same
+    address. If there's no report, the page says so. It says the same thing whether or not that address has ever
+    sent a test.</p>
+<p>Lookups are limited to {{ v.lookups_minute }} a minute and {{ v.lookups_hour }} an hour per IP address, so
+    people sharing one (an office or a VPN) share the allowance. Every press of <strong>View Report</strong> or
+    <strong>Check again</strong> counts, even when there's no report, but opening an email's link, or downloading the
+    headers from a report on screen, doesn't.</p>
+<p>The address you enter is sent with the form, not as part of the page's web address, so it isn't kept in
+    your browser history or in the web server's access logs.</p>
+
+<h2 id="email-link">The link in the email</h2>
+<p>The emailed report ends with a link to its copy online. Opening the link shows a <strong>View Report</strong>
+    button: press it to see the report.</p>
+<p>The button is there because many mail systems open every link in an email to scan it for danger. If the
+    link showed the report straight away, a scanner could start the report's
+    <a href="#self-destruct">self-destruct clock</a> before you'd seen it.</p>
+<p>Each link is a random code that can't be guessed, and it only ever shows that one report.</p>
+
+<h2 id="self-destruct">Why reports self-destruct</h2>
+<p>Reports are kept only as long as they're useful:</p>
+<ul>
+    <li>A report that nobody looks at online expires after {{ v.unviewed_hours }} hours.</li>
+    <li>Once it's been shown on this website, it expires {{ v.viewed_minutes }} minutes later. A red banner at
+        the top says how many minutes were left when the page loaded.</li>
+    <li>Only the most recent {{ v.max_results }} reports are kept, so on a busy day an older report can go
+        sooner.</li>
+</ul>
+<p>Need it for longer? Keep the emailed report, or save or print the report page. The <strong>Download the full
+    email headers (.txt)</strong> button saves just the test's headers. More on what's kept in
+    <a href="{{ url_for('docs.page', slug='privacy') }}">Privacy and limits</a>.</p>
+
+<h2 id="email-vs-web">The website and the email</h2>
+<p>The report online says exactly what the email says, box by box, with one difference. The email can tell
+    you that the reply reached the domain, because you're reading it. The website can't know that, so when
+    the domain has MX records, its "Can receive email" row shows <strong>?</strong> with "Unknown: this is
+    only available in the emailed report", and its overall status is never "All Tests Passed". (Missing MX
+    records still show as a failure.)</p>
+<div class="docs-compare">
+    <figure>
+        <figcaption>In the email</figcaption>
+        {{ m.overview(examples["passed"]) }}
+    </figure>
+    <figure>
+        <figcaption>On this website</figcaption>
+        {{ m.overview(examples["passed"], web=True) }}
+    </figure>
+</div>
+<p>The website also doesn't show the summary picture that's attached to the email. For the full check, use
+    the emailed report.</p>
+{% endblock %}

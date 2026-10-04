@@ -1,0 +1,55 @@
+{% extends "doc-pages/page.html" %}
+{% block body %}
+<p>{{ app_title }} is open source. This section is for anyone running their own copy. You don't need it to
+    use this one.</p>
+
+<h2 id="services">Two services</h2>
+<p>One Docker image runs as two services, which share a small SQLite database:</p>
+<dl class="docs-defs">
+    <dt>poller</dt>
+    <dd>Checks the test mailbox over IMAP every <code>POLL_SECONDS</code>, checks each message, saves the report
+        for the website, emails the report back over SMTP, then deletes the message. It always runs. It handles up
+        to {{ v.max_per_poll }} messages per check, taking turns between folders so a busy inbox can't hold up the
+        others.</dd>
+    <dt>web</dt>
+    <dd>Optional: this website, a small Flask app served by gunicorn behind your own reverse proxy. It shows
+        reports looked up by address or by the link in the email, and these docs. Without it, reports are only
+        emailed and nothing is kept.</dd>
+</dl>
+<p>The poller reads the inbox and any folder the mail server marks as junk, or named exactly Junk, Spam,
+    INBOX.Junk, INBOX.Spam, Junk E-mail, Junk Email or Bulk Mail (any capitalization). Other folders aren't read,
+    so make sure no mailbox rule moves tests elsewhere. The folder list is refreshed hourly.</p>
+<p>The database holds only short-lived reports and rate-limit counters, which expire on their own: the poller
+    clears out expired ones at least once a minute, even while the mail server can't be reached.</p>
+
+<h2 id="one-test">What happens to a test</h2>
+<ol>
+    <li>The poller finds the message in the mailbox and downloads it (messages over {{ v.max_mb }} MB are deleted
+        without being downloaded, and one whose size the server doesn't report waits for the next check).</li>
+    <li>It finds the receiving mail server's <code>Received:</code> header and takes the sending server's IP
+        address, its HELO name and the envelope sender from it.</li>
+    <li>It runs the checks: PTR and MX lookups, SPF for the sending IP, DKIM for each signature (using the
+        message's text, in memory only), then DMARC. SPF has 20 seconds, and the other DNS lookups share 30
+        seconds, so a domain whose DNS answers slowly can't hold up everyone else's tests.</li>
+    <li>With the website, it saves the report (headers and results, never the text) under a random code.</li>
+    <li>It decides whether to reply (see <a href="{{ url_for('docs.page', slug='send-a-test') }}#who-gets-the-report">Who
+        gets the report</a> and the limits), and emails the report.</li>
+    <li>If the message couldn't be checked at all, a short report saying so is kept online, and no email is
+        sent.</li>
+    <li>It deletes the message from the mailbox. If the email couldn't be sent for a temporary reason, the
+        message is kept and sending is retried on later checks of the mailbox (at least {{ v.retry_schedule }}
+        minutes apart, up to {{ v.max_attempts }} attempts) before it's deleted.</li>
+</ol>
+
+<h2 id="trust">What's trusted</h2>
+<p>Every <code>Received:</code> header below the one your own receiving server wrote was added by the sender's
+    side and could be forged, so the checks only trust the header written by a server named in
+    <code>TRUSTED_MX_HOSTS</code>. A backup MX relaying to the main one is recognised by its verified reverse DNS,
+    never by the name it gives in HELO.</p>
+<p>Some receiving servers add their own authentication verdicts to the headers (such as
+    <code>Authentication-Results</code> or spam scores). They can't be told apart from forged copies, so they're
+    never used: every check is done from scratch.</p>
+<p class="callout note">The header parser is written for the format Exim uses
+    (<code>from &lt;helo&gt; ([&lt;ip&gt;]) by &lt;server&gt; with esmtp … (envelope-from &lt;…&gt;)</code>). Other mail
+    servers need changes to <code>healthcheck/received.py</code>.</p>
+{% endblock %}

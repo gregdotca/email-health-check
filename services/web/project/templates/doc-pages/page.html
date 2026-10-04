@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{#- The documentation's layout: a sidebar with every page (a "Contents" menu on narrow screens), the page,
+    "On this page" links (beside it on wide screens), then previous/next. Pages fill in the body block;
+    their h2 ids must match page.toc (docs.py). -#}
+{% import "doc-pages/_macros.html" as m %}
+{% block title %}{{ page.title }} · {{ app_title }} Documentation{% endblock %}
+{% block page %}
+<div class="docs">
+    <header class="docs-header">
+        <p class="docs-brand"><a href="/">{{ app_title }}</a> <span aria-hidden="true">/</span> <a href="{{ url_for('docs.index') }}">Documentation</a></p>
+        <a class="docs-cta" href="/">Look up a report</a>
+    </header>
+    <div class="docs-layout">
+        <nav class="docs-nav" aria-label="Documentation">{{ m.nav(pages, groups, page) }}</nav>
+        <main class="docs-main">
+            <details class="docs-menu">
+                <summary>Contents</summary>
+                <nav aria-label="Documentation">{{ m.nav(pages, groups, page) }}</nav>
+            </details>
+            <div class="docs-head">
+                <p class="docs-group">{{ page.group }}</p>
+                <h1>{{ page.title }}</h1>
+                <p class="docs-lead">{{ page.lead|replace("{app}", app_title) }}</p>
+            </div>
+            {% if page.toc|length > 1 %}
+            <nav class="docs-toc" aria-label="On this page">
+                <p>On this page</p>
+                <ul>{% for anchor, heading in page.toc %}<li><a href="#{{ anchor }}">{{ heading }}</a></li>{% endfor %}</ul>
+            </nav>
+            {% endif %}
+            <div class="docs-body">
+                {% block body %}{% endblock %}
+            </div>
+            <nav class="docs-pager" aria-label="Previous and next">
+                {% if prev %}<a class="prev" href="{{ prev.url }}"><span>Previous</span>{{ prev.title }}</a>{% else %}<span></span>{% endif %}
+                {% if next %}<a class="next" href="{{ next.url }}"><span>Next</span>{{ next.title }}</a>{% endif %}
+            </nav>
+        </main>
+    </div>
+</div>
+{% endblock %}

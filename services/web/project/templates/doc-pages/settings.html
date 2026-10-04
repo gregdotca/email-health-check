@@ -1,0 +1,60 @@
+{% extends "doc-pages/page.html" %}
+{#- Defaults come from healthcheck/settings.py (DEFAULTS) where they live there; generic only: never this
+    installation's values, which can include private details. -#}
+{% block body %}
+<p>All settings live in the <code>.env</code> file next to <code>docker-compose.yml</code>, and
+    <code>.env.example</code> lists every one. A missing or invalid setting stops the service at startup with a
+    message naming it. Leave an optional setting out, or empty, to get its default (except
+    <code>SENDING_EMAIL_FROM_NAME</code>, below).</p>
+
+<h2 id="mail">Mail</h2>
+<table class="docs-table settings">
+    <thead><tr><th>Setting</th><th>Default</th><th>What it's for</th></tr></thead>
+    <tbody>
+        <tr><td><code>RECEIVING_EMAIL_ADDRESS</code> <span class="req">required</span></td><td></td><td>The address people send tests to. It's never answered, nor is anything else at its domain.</td></tr>
+        <tr><td><code>RECEIVING_EMAIL_HOST</code>, <code>RECEIVING_EMAIL_USER</code>, <code>RECEIVING_EMAIL_PASSWORD</code> <span class="req">required</span></td><td></td><td>The test mailbox's IMAP login. The user is often the same as the address, but not for an alias.</td></tr>
+        <tr><td><code>SENDING_EMAIL_HOST</code> <span class="req">required</span></td><td></td><td>The SMTP server that sends the reports.</td></tr>
+        <tr><td><code>SENDING_EMAIL_HOST_USER</code>, <code>SENDING_EMAIL_HOST_PASSWORD</code></td><td>none (no login)</td><td>The SMTP login, for a server that needs one (most do).</td></tr>
+        <tr><td><code>SENDING_EMAIL_PORT</code>, <code>SENDING_EMAIL_USE_TLS</code></td><td><code>587</code>, <code>True</code></td><td><code>True</code> starts TLS (STARTTLS) before logging in.</td></tr>
+        <tr><td><code>SENDING_EMAIL_FROM</code>, <code>SENDING_EMAIL_FROM_NAME</code></td><td>the test address, <code>APP_NAME</code></td><td>The reports' From: address and name. Leave the name out to use <code>APP_NAME</code>, or set it empty for no name.</td></tr>
+        <tr><td><code>POLL_SECONDS</code> <span class="req">required</span></td><td></td><td>Seconds between mailbox checks, at least {{ v.min_poll }}.</td></tr>
+        <tr><td><code>DRY_RUN</code></td><td><code>False</code></td><td><code>True</code>: messages are checked, but nothing is sent, flagged or deleted.</td></tr>
+    </tbody>
+</table>
+
+<h2 id="website">Website and Compose</h2>
+<table class="docs-table settings">
+    <thead><tr><th>Setting</th><th>Default</th><th>What it's for</th></tr></thead>
+    <tbody>
+        <tr><td><code>PUBLIC_URL</code></td><td>none (email-only)</td><td>The website's address, such as <code>https://check.example.com</code>, with no path. The report emails link to it.</td></tr>
+        <tr><td><code>COMPOSE_PROFILES</code></td><td>none (email-only)</td><td><code>web</code> to run the website (read by Docker Compose).</td></tr>
+        <tr><td><code>DOCS_ENABLED</code></td><td><code>{{ defaults.DOCS_ENABLED }}</code></td><td>This documentation, at <code>/docs/</code>, with links to it from the website and the report emails. <code>False</code> turns it off.</td></tr>
+        <tr><td><code>WEB_BIND</code></td><td><code>127.0.0.1:8080</code></td><td>Where the website listens on the host, as IP:port.</td></tr>
+        <tr><td><code>TRUSTED_PROXY_HOPS</code></td><td><code>{{ defaults.TRUSTED_PROXY_HOPS }}</code></td><td>How many reverse proxies are in front of the website (<code>0</code> if none), so the lookup limits see each visitor's real IP address.</td></tr>
+        <tr><td><code>CONTAINER_NAME</code></td><td><code>health-check</code></td><td>Container names: this, and this plus <code>-poller</code>. Each copy on a host needs its own.</td></tr>
+    </tbody>
+</table>
+
+<h2 id="app">Reports and limits</h2>
+<table class="docs-table settings">
+    <thead><tr><th>Setting</th><th>Default</th><th>What it's for</th></tr></thead>
+    <tbody>
+        <tr><td><code>TRUSTED_MX_HOSTS</code> <span class="req">required</span></td><td></td><td>Your receiving mail servers' names, comma-separated (see <a href="{{ url_for('docs.page', slug='setup') }}#setup">Setup</a>).</td></tr>
+        <tr><td><code>APP_NAME</code></td><td><code>{{ defaults.APP_NAME }}</code></td><td>The name on the website, the emails and the summary picture.</td></tr>
+        <tr><td><code>DISPLAY_TIMEZONE</code></td><td><code>{{ defaults.DISPLAY_TIMEZONE }}</code></td><td>The time zone for times in the reports, such as <code>America/New_York</code>.</td></tr>
+        <tr><td><code>RESULTS_KEPT_HOURS</code></td><td><code>{{ defaults.RESULTS_KEPT_HOURS }}</code></td><td>How long a report is kept if nobody looks it up.</td></tr>
+        <tr><td><code>RESULTS_KEPT_AFTER_VIEW_MINUTES</code></td><td><code>{{ defaults.RESULTS_KEPT_AFTER_VIEW_MINUTES }}</code></td><td>How long a report is kept after the website first shows it.</td></tr>
+        <tr><td><code>LOOKUPS_PER_MINUTE</code>, <code>LOOKUPS_PER_HOUR</code></td><td><code>{{ defaults.LOOKUPS_PER_MINUTE }}</code>, <code>{{ defaults.LOOKUPS_PER_HOUR }}</code></td><td>Website lookups per IP address.</td></tr>
+        <tr><td><code>MAIL_PER_RECIPIENT_PER_HOUR</code>, <code>MAIL_PER_RECIPIENT_PER_DAY</code></td><td><code>{{ defaults.MAIL_PER_RECIPIENT_PER_HOUR }}</code>, <code>{{ defaults.MAIL_PER_RECIPIENT_PER_DAY }}</code></td><td>Report emails to any one address.</td></tr>
+        <tr><td><code>MAIL_PER_DAY</code></td><td><code>{{ defaults.MAIL_PER_DAY }}</code></td><td>Report emails in total, from everyone: a hard daily ceiling.</td></tr>
+    </tbody>
+</table>
+
+<h2 id="values">Allowed values</h2>
+<p>Retention times and lookup and email limits must be whole numbers of at least 1: zero doesn't turn them off.
+    <code>TRUSTED_PROXY_HOPS</code> may be 0, <code>POLL_SECONDS</code> must be at least {{ v.min_poll }}, and
+    <code>SENDING_EMAIL_PORT</code> must be from 1 to 65535.</p>
+<p>On/off settings (<code>SENDING_EMAIL_USE_TLS</code>, <code>DRY_RUN</code>, <code>DOCS_ENABLED</code>) take
+    <code>True</code> or <code>False</code>, in any capitalization. Anything else, like <code>yes</code> or
+    <code>1</code>, is refused at startup.</p>
+{% endblock %}

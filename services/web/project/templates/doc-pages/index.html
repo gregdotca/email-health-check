@@ -1,0 +1,49 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<p>{{ app_title }} tells you whether a domain's email is set up properly. Send one email to {{ m.address(v) }}
+    and you get a report back: can the domain send and receive email, and does its mail pass the
+    authentication checks (SPF, DKIM and DMARC) that receiving servers use to decide what to trust.</p>
+<p>It's meant for the people who look after a domain's email. Send the test from the mail system you want to
+    check, and the report shows what a receiving mail server sees.</p>
+
+<h2 id="how-it-works">How it works</h2>
+<ol class="docs-steps">
+    <li>
+        <h3>Send a test email</h3>
+        <p>From any mailbox on the domain you want to check, send an email to {{ m.address(v) }}. The subject and
+            text don't matter (though some mail programs won't send a message with a blank subject).</p>
+    </li>
+    <li>
+        <h3>Get the report by email</h3>
+        <p>A reply with the report arrives at the address you sent from, usually within {{ m.within(v) }}.</p>
+    </li>
+    <li>
+        <h3>Or view it online</h3>
+        <p>Enter the address you sent from on the <a href="/">home page</a> to see the same report here, handy if the
+            reply can't reach you. Reports online don't last: see <a href="{{ url_for('docs.page', slug='view-online') }}">View a report online</a>.</p>
+    </li>
+</ol>
+
+<h2 id="what-you-get">What you get</h2>
+<p>Every report starts with a summary: three plain answers and an overall status.</p>
+{{ m.overview(examples["passed"], titled=True) }}
+<p>Below the summary, the report has a box for each check:</p>
+<ul>
+    <li><a href="{{ url_for('docs.page', slug='ptr') }}"><strong>PTR</strong></a>: does the sending server's IP address have a name that points back to it?</li>
+    <li><a href="{{ url_for('docs.page', slug='spf') }}"><strong>SPF</strong></a>: does the domain allow that server to send its mail?</li>
+    <li><a href="{{ url_for('docs.page', slug='dkim') }}"><strong>DKIM</strong></a>: is the message signed with a key the domain publishes?</li>
+    <li><a href="{{ url_for('docs.page', slug='dmarc') }}"><strong>DMARC</strong></a>: does the domain publish a policy, and did SPF or DKIM pass for it?</li>
+</ul>
+<p>Checks that don't pass explain why, and problems with a record are pointed out. The emailed report also has
+    the summary as a picture, ready to share, and the message's full headers.</p>
+
+<h2 id="where-next">Where to go next</h2>
+<div class="docs-cards">
+    {% for p in pages[1:] if p.group in ("Getting started", "Reading the report", "Help") %}
+    <a class="docs-card" href="{{ p.url }}"><strong>{{ p.title }}</strong><span>{{ p.lead }}</span></a>
+    {% endfor %}
+</div>
+<p>Running your own copy? Start with <a href="{{ url_for('docs.page', slug='how-it-works') }}">How it works</a>
+    and <a href="{{ url_for('docs.page', slug='setup') }}">Requirements and setup</a>.</p>
+{% endblock %}

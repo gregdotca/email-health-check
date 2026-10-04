@@ -1,0 +1,40 @@
+{#- Pieces the documentation pages share. -#}
+
+{% macro nav(pages, groups, current) -%}
+{% for group in groups %}
+<p class="docs-nav-group">{{ group }}</p>
+<ul>
+    {% for p in pages if p.group == group %}
+    <li><a href="{{ p.url }}"{% if p == current %} aria-current="page"{% endif %}>{{ p.title }}</a></li>
+    {% endfor %}
+</ul>
+{% endfor %}
+{%- endmacro %}
+
+{#- A summary box drawn from an example result by the same rules as a real report (the email's version).
+    titled: with the summary picture's title line (APP_NAME - when the test arrived). -#}
+{% macro overview(r, web=False, titled=False) -%}
+<div class="card overview docs-example">
+    {% if titled %}<p class="summary-title"><strong>{{ app_title }}</strong> - <em>{{ r|received }}</em></p>{% endif %}
+    <h2>{{ r|sender_domain }} <span class="badge {{ r|overview_status(web=web)|verdict }}">{{ r|overview_status(web=web) }}</span></h2>
+    <ul>
+        {% for passed, label, detail in r|overview(web=web) %}
+        <li><span class="mark {{ passed|mark_verdict }}">{{ passed|mark }}</span> <span class="label">{{ label }}</span> <span class="detail">{{ detail }}</span></li>
+        {% endfor %}
+    </ul>
+</div>
+{%- endmacro %}
+
+{#- The test address, or a generic phrase when this installation doesn't say -#}
+{% macro address(v) -%}
+{% if v.address %}<code>{{ v.address }}</code>{% else %}the test address{% endif %}
+{%- endmacro %}
+
+{% macro within(v) -%}
+{% if v.poll_seconds %}about {{ v.poll_seconds }} seconds{% else %}a minute or so{% endif %}
+{%- endmacro %}
+
+{#- One result word and what it means: a row of a results table -#}
+{% macro result(word, text) -%}
+<tr><td><span class="badge {{ word|verdict }}">{{ word }}</span></td><td>{{ text }}</td></tr>
+{%- endmacro %}

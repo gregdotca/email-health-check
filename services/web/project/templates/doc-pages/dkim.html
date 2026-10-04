@@ -1,0 +1,70 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<h2 id="what-it-proves">What it proves</h2>
+<p>DKIM (DomainKeys Identified Mail) adds a signature to each message. The sending domain publishes the
+    matching public key in DNS, at <code><em>selector</em>._domainkey.<em>domain</em></code>. A valid signature
+    shows that the message was signed with that domain's key, and that the parts it signed (the headers it
+    lists and the text) weren't changed on the way, apart from small changes to spacing that DKIM allows.</p>
+<p>A message can carry several signatures, for example one from your domain and one from your mail service.
+    The check verifies the first {{ v.max_signatures }}, and if there are more, the summary says how many weren't
+    checked.</p>
+
+<h2 id="results">Results</h2>
+<table class="docs-table">
+    <thead><tr><th>Result</th><th>Meaning</th></tr></thead>
+    <tbody>
+        {{ m.result("pass", explain.dkim["pass"]) }}
+        {{ m.result("fail", explain.dkim["fail"]) }}
+        {{ m.result("permerror", explain.dkim["permerror"]) }}
+        {{ m.result("temperror", explain.dkim["temperror"]) }}
+        {{ m.result("none", "The message has no DKIM signature.") }}
+    </tbody>
+</table>
+<p>Two failures have their own explanation:</p>
+<ul>
+    <li>{{ explain.dkim_expired }}</li>
+    <li>{{ explain.dkim_sha1 }}</li>
+</ul>
+<p>The box's own result is <code>pass</code> if any signature passes, otherwise the first signature's
+    result.</p>
+<p>RSA keys (at least 1,024 bits, as smaller ones fail) and Ed25519 keys are supported. To keep checks quick and
+    safe, a signature is a <code>permerror</code> if its RSA key is over 8,192 bits, if its <code>h=</code> list
+    names more than 64 headers (repeats count), or if the message has more than 1,000 header fields. A signature also fails if the key's own tags rule
+    it out: <code>h=</code> (the hash algorithms the key may be used with) or <code>t=s</code> (the signature's
+    <code>i=</code> identity must be at the domain itself, not a subdomain).</p>
+<p class="callout note">A signature with an <code>l=</code> tag only covers the first part of the text, so text
+    added after that part doesn't break it. Most services don't use <code>l=</code>.</p>
+
+<h2 id="rows">What the box shows</h2>
+<p>One entry per signature:</p>
+<dl class="docs-defs">
+    <dt>signed by</dt><dd>The domain the signature is for (its <code>d=</code> tag), with its result.</dd>
+    <dt>Selector</dt><dd>Where the key was looked up in DNS.</dd>
+    <dt>Reason</dt><dd>For a signature that didn't pass: the exact reason given by the check.</dd>
+</dl>
+
+<h2 id="own-domain">Your domain's signature</h2>
+<p>Receivers, and DMARC, care most about a signature for the domain in the From: address. A signature only
+    for your mail service's domain says the service sent the message, not that your domain did.</p>
+<p>So the summary's "Is authenticated" line only names DKIM when a signature for your domain passes, and flags a
+    message signed only by another domain ({{ "warn"|mark }}, unless SPF has already made it {{ false|mark }}). For the summary, any domain under the
+    same registered domain counts: <code>example.com</code>, <code>mail.example.com</code> and
+    <code>news.example.com</code> all count for each other. DMARC can be stricter (see
+    <a href="{{ url_for('docs.page', slug='dmarc') }}#alignment">Alignment</a>).</p>
+{{ m.overview(examples["esp-only"]) }}
+
+<h2 id="fixing">Fixing it</h2>
+<ul>
+    <li><strong>none, or signed only by your mail service</strong>: turn on DKIM signing for your own domain in
+        the mail service's settings. It gives you one or more DNS records (usually CNAME or TXT records under
+        <code>_domainkey</code>) to publish.</li>
+    <li><strong>permerror</strong>: the key record named by the selector is missing or malformed. Check that the
+        record your service gave you is published exactly, under the right name.</li>
+    <li><strong>fail</strong>: the message was changed after signing (often by a forwarding service, a
+        mailing list or a security gateway that adds a footer), or the published key doesn't match the one the
+        server signs with. Send the test directly, and check that the key in DNS is the current one.</li>
+    <li><strong>rsa-sha1</strong>: switch the signing to rsa-sha256 in your mail server or service.</li>
+    <li><strong>temperror</strong>: send another test. If it keeps happening, check the domain's DNS servers.</li>
+</ul>
+{% endblock %}

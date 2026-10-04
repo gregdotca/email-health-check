@@ -1,0 +1,144 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<h2 id="sending">Sending tests</h2>
+
+<h3 id="personal-account">Can I test from a Gmail, Outlook.com or other personal address?</h3>
+<p>Yes, but the report is then about that provider's domain (<code>gmail.com</code>, for example), not yours. To
+    check your own domain, send from an address at your domain, through the system that normally sends its
+    mail.</p>
+
+<h3 id="aliases">I sent from an alias or a "send as" address. Why didn't the report come?</h3>
+<p>The report goes to the From: address, and only when the envelope sender (Return-Path) is at the same domain.
+    Some mail systems send an alias's mail with an envelope sender at another domain, so no report is emailed.
+    The report is still kept online: look it up with either address.</p>
+
+<h3 id="reply-to">Does the report go to my Reply-To address?</h3>
+<p>No. The <code>Reply-To</code> header is ignored: the report always goes to the From: address.</p>
+
+<h3 id="forwarding">Can I forward a message to the test address?</h3>
+<p>Using <strong>Forward</strong> in your mail program creates a new message from you, so the report is about
+    your address and how your mail is sent, not about the original message.</p>
+<p>Automatic forwarding (a rule that redirects mail) passes the original message on through another server.
+    SPF and PTR are then checked for that server instead of the original sender's (SPF usually fails), and
+    forwarding can break DKIM. To test your own mail, send a new message straight to {{ m.address(v) }}.</p>
+
+<h3 id="subdomain">How do I test a subdomain, such as news.example.com?</h3>
+<p>Send from an address at the subdomain: the report is about the domain in the From: address. Two things to
+    expect:</p>
+<ul>
+    <li>"Can receive email" checks the subdomain's own MX records. A subdomain that only sends mail often has
+        none, so it shows {{ false|mark }}. If the subdomain should receive replies or bounces, give it MX records.</li>
+    <li>If the subdomain has no DMARC record of its own, the one for its main domain applies, including its
+        <code>sp=</code> policy (see <a href="{{ url_for('docs.page', slug='dmarc') }}#what-it-proves">DMARC</a>).</li>
+</ul>
+
+<h3 id="services">We use several mail services. Which one does a test check?</h3>
+<p>Only the one that sent the test. Your mailboxes, a newsletter service and a ticket system each send from
+    their own servers and need their own SPF and DKIM set-up, so test each one separately.</p>
+
+<h3 id="spam-folder">My test landed in the test address's spam folder. Does that matter?</h3>
+<p>No. The spam folder is checked too (see <a href="{{ url_for('docs.page', slug='how-it-works') }}#services">which
+    folders</a>), and the folder never affects the results: "Can send email" only means the test arrived.</p>
+<p>Keep in mind that SPF, DKIM and DMARC show whether your mail is authenticated, not whether it lands in the
+    inbox: every receiver also applies its own spam, reputation and content checks.</p>
+
+<h3 id="rejected">Can a test be refused before it's checked?</h3>
+<p>Yes. The receiving mail server runs its own spam and policy checks first. A message it rejects or deletes,
+    for example one that looks very like spam or that fails a strict DMARC policy (<code>p=reject</code>), never
+    reaches the check, so there's no report at all. Look for a bounce message in your mailbox, which usually
+    gives the reason.</p>
+
+<h3 id="several-tests">Can I send several tests in a row?</h3>
+<p>Yes, within the <a href="{{ url_for('docs.page', slug='send-a-test') }}#how-often">limits</a>. Each gets its own
+    report email, and each email's link opens that particular report. Looking up the address shows the newest
+    one, and showing any report deletes the older ones from the same address, so links in earlier report emails
+    then stop working.</p>
+
+<h3 id="dns-changes">I fixed my DNS, but the new test says the same thing.</h3>
+<p>DNS answers are cached for as long as the record's TTL (time to live) says, often an hour or more, so a
+    change can take that long to be seen everywhere, including by the check. Wait for the old record's TTL to
+    pass, then send another test.</p>
+
+<h2 id="results">Understanding the results</h2>
+
+<h3 id="spf-pass-dmarc-fail">Why does SPF pass but DMARC fail?</h3>
+<p>SPF checks the envelope sender's domain, which a mail service often sets to its own. SPF can then pass for
+    the service's domain without matching your From: domain, so it doesn't count for DMARC. Setting up DKIM for
+    your domain with the service usually fixes it (see
+    <a href="{{ url_for('docs.page', slug='dmarc') }}#alignment">Alignment</a>).</p>
+
+<h3 id="unknown-signer">The report shows a DKIM signature from a domain I don't recognise.</h3>
+<p>It's usually your mail provider's own signature, which many providers add to everything they send. That's
+    fine alongside your own, but it doesn't replace it: you still need a signature for your domain (any domain
+    under it, such as <code>mail.example.com</code>, counts). An extra signature that fails is still flagged,
+    even when yours passes.</p>
+
+<h3 id="no-from">The report says the message needs exactly one From: address.</h3>
+<p>The test had no From: address, or more than one. DMARC can't be checked, and no report is emailed. Send a
+    normal message from a single address.</p>
+
+<h3 id="cut-off">Why does a value end in "…"?</h3>
+<p>Very long values, such as a huge subject or record, are cut off to keep reports a sensible size. Encoded
+    subjects (common from marketing services) are shown decoded, as you'd read them.</p>
+
+<h3 id="ipv6">Does it work with IPv6?</h3>
+<p>Yes. If your server delivered the test over IPv6, SPF and PTR are checked for its IPv6 address, so your SPF
+    record has to cover it (with <code>ip6:</code>, a provider's include, or <code>a</code> or <code>mx</code>
+    that resolve to it), and the address needs reverse DNS too.</p>
+
+<h2 id="online">Reports online</h2>
+
+<h3 id="share">Can I share a report?</h3>
+<p>Forward the report email, or share its summary picture. Anyone with the link at the end of the email can see
+    the report online while it's kept, but the first view starts its {{ v.viewed_minutes }}-minute clock for
+    everyone.</p>
+
+<h3 id="shared-mailbox">Several of us test from the same address.</h3>
+<p>Looking up the address shows everyone the same, newest report, and showing it deletes the older ones. Use
+    the link in your own report email instead, or look up soon after your test. The emailed reports aren't
+    affected.</p>
+
+<h3 id="look-up-which-address">Which address do I look up?</h3>
+<p>The From: address the test was sent from. The envelope sender (Return-Path) works too, but some services use
+    one envelope sender for many customers, so looking that up can show someone else's newer test. Capital
+    letters don't matter.</p>
+
+<h2 id="running">Running your own</h2>
+
+<h3 id="other-mail-servers">Does it work with mail servers other than Exim?</h3>
+<p>Not without changes. It reads the receiving server's <code>Received:</code> header in Exim's format (see
+    <a href="{{ url_for('docs.page', slug='how-it-works') }}#trust">What's trusted</a>). Other formats are
+    rejected or only partly understood: for example, the sending IP may be found but not the envelope sender, so
+    SPF checks the wrong name and no report is emailed. Adapt <code>healthcheck/received.py</code> first.</p>
+
+<h3 id="settings-changes">I changed .env. Why didn't anything change?</h3>
+<p>Settings are read when the services start. Run <code>docker compose up -d</code> after changing
+    <code>.env</code>: Compose recreates the services whose settings changed.</p>
+
+<h3 id="two-copies">Can two copies use the same mailbox?</h3>
+<p>Avoid it. Tests are split unpredictably between the copies, and both can pick up the same message before
+    either deletes it, so it's answered twice. A copy with <code>DRY_RUN=True</code> next to a live one only sees the messages it happens to reach
+    before the live copy deletes them.</p>
+
+<h3 id="dry-run">What should I know about DRY_RUN?</h3>
+<p>Nothing is sent, flagged or deleted, so test messages pile up in the mailbox. Each message is only handled
+    once while the poller runs, but after a restart every message still in the mailbox is checked again.</p>
+
+<h3 id="restarts">What happens to a report waiting to be retried if the poller restarts?</h3>
+<p>The retry schedule is kept in memory, so the message, still in the mailbox, is handled again from the start:
+    checked again, and its report sent (and counted against the limits) as if new.</p>
+
+<h3 id="proxy">The lookup limit blocks everyone at once, or doesn't seem to apply.</h3>
+<p><code>TRUSTED_PROXY_HOPS</code> doesn't match the number of reverse proxies in front of the website. Too low,
+    and every visitor looks like the proxy, so they share one limit. Too high, and visitors can pretend to be
+    someone else with a made-up <code>X-Forwarded-For</code> header. Set it to the number of proxies that add
+    that header, and <code>0</code> if the website is reached directly.</p>
+
+<h3 id="sub-path">Can the website live under a path, such as example.com/health-check/?</h3>
+<p>No. <code>PUBLIC_URL</code> must be a site of its own, like <code>https://check.example.com</code>, because the
+    report links and these docs are at fixed paths from its root.</p>
+
+<h3 id="security">How do I report a security problem?</h3>
+<p>Privately, as described in <code>SECURITY.md</code> in the project's repository, not in a public issue.</p>
+{% endblock %}

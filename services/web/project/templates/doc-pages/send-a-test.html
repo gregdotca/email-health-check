@@ -1,0 +1,61 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{% block body %}
+<h2 id="send">Send the test</h2>
+<ol>
+    <li>Pick a mailbox on the domain you want to check, for example <code>postmaster@yourdomain.com</code> or
+        your own address there.</li>
+    <li>Send an email from it to {{ m.address(v) }}. Any subject and body text will do (though some mail programs
+        won't send a message with a blank subject).</li>
+    <li>Wait for the reply. The test address is checked
+        {% if v.poll_seconds %}every {{ v.poll_seconds }} seconds{% else %}regularly{% endif %}, so the report
+        usually arrives within {{ m.within(v) }}.</li>
+</ol>
+<p class="callout note">Send the test the way your real mail goes out. To check mail sent by a newsletter
+    service, a ticket system or a website's contact form, send the test through that service: each one
+    sends from its own servers, so each one can pass or fail on its own. Such services often add headers
+    that mean no report is emailed (see <a href="#not-answered">below</a>){% if v.public_url %}, but the
+    report can still be <a href="{{ url_for('docs.page', slug='view-online') }}">looked up online</a>{% endif %}.</p>
+<p>A test can be delivered to the test address's spam folder: that's fine, it's checked too. Messages over
+    {{ v.max_mb }} MB are deleted without a reply, so keep the test small.</p>
+
+<h2 id="who-gets-the-report">Who gets the report</h2>
+<p>The report goes to the message's <strong>From:</strong> address, the one people see, but only when the
+    <strong>envelope sender</strong> (the Return-Path, where bounces go) is at the same domain. Subdomains count as
+    the same domain, so a Return-Path at <code>bounces.example.com</code> matches a From: address at
+    <code>example.com</code>. This keeps reports from going to unrelated domains, but it doesn't prove who sent the
+    test (both addresses can be forged), which is why there are <a href="#how-often">sending limits</a> too.</p>
+<p>Failing SPF, DKIM or DMARC never stops the reply: that's exactly what you want to know. But a reply sent
+    to a domain whose own mail setup is badly broken may itself be delayed or filtered, so if it doesn't come,
+    <a href="{{ url_for('docs.page', slug='view-online') }}">look the report up online</a>.</p>
+
+<h2 id="not-answered">Messages that aren't answered</h2>
+<p>Automatic mail never gets a reply, so that two automatic systems can't keep answering each other, and
+    neither does mail the report couldn't safely be sent back to:</p>
+<ul>
+    <li>bounces (a message with an empty envelope sender)</li>
+    <li>automatic replies, such as out-of-office messages (an <code>Auto-Submitted</code> header saying anything
+        other than <code>no</code>)</li>
+    <li>bulk and mailing-list mail (a <code>Precedence</code> header of bulk, list, junk or auto_reply, or a
+        <code>List-Id</code> or <code>List-Unsubscribe</code> header, which most email marketing services add)</li>
+    <li>messages from system or no-reply addresses: {% for p in v.skip_local_parts %}<code>{{ p }}@</code>{{ ", " if not loop.last }}{% endfor %}</li>
+    <li>messages whose envelope sender is at a different domain from the From: address</li>
+    <li>messages from the test address's own domain, or from the address the reports are sent from</li>
+    <li>messages without exactly one From: address</li>
+</ul>
+<p><code>postmaster@</code> is answered: it's a common address to test from.</p>
+<p>A test that isn't answered is still checked{% if v.public_url %}, so you can
+    <a href="{{ url_for('docs.page', slug='view-online') }}">look it up online</a>{% endif %}.</p>
+
+<h2 id="how-often">How often you can test</h2>
+<p>To keep the service fair and stop it being used to send mail to others, there are limits on report
+    emails:</p>
+<ul>
+    <li>{{ v.mail_hour }} reports an hour and {{ v.mail_day }} a day to any one address</li>
+    <li>{{ v.mail_total }} reports a day in total, from everyone</li>
+</ul>
+<p>The limits count the last hour and the last 24 hours, not calendar days, and a report counts once it's been
+    tried, even if it couldn't be delivered. Past a limit, tests are still checked but no report is emailed.</p>
+<p>If sending a report fails for a temporary reason, it's tried again on later checks of the mailbox, at least
+    {{ v.retry_schedule }} minutes apart, then given up. Retries don't count against the limits again.</p>
+{% endblock %}
