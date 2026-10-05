@@ -13,6 +13,10 @@ Date-grouped, newest first.
   set to its default.
 
 ### Documentation
+- "Send an email to" in place of "Send one email to" / "Send any email to" on the introduction page
+  (`services/web/project/templates/doc-pages/index.html:4`), the setup page
+  (`services/web/project/templates/doc-pages/setup.html:56`) and the README (`README.md:3`).
+- README: the DejaVu font license note is now its own paragraph under License.
 - Documentation on the web page at `/docs/`: sending a test, viewing reports online, reading the report
   and its summary, a page per check (PTR, SPF, DKIM, DMARC) with every result and how to fix it,
   troubleshooting, privacy and limits, a glossary, and a section on running your own (how it works,

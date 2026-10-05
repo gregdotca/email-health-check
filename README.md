@@ -1,6 +1,6 @@
 # Email Health Check
 
-Send any email to a test address and, within a minute or so, get an email back that says whether your
+Send an email to a test address and, within a minute or so, get an email back that says whether your
 domain's mail is set up properly: PTR (reverse DNS), SPF, DKIM and DMARC, plus an at-a-glance summary.
 Optionally, the same report can also be looked up on a small web page by entering the address you sent
 from.
@@ -100,5 +100,6 @@ Please report vulnerabilities privately: see [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT: see [LICENSE](LICENSE). The bundled DejaVu fonts keep their own license
-(`services/web/healthcheck/fonts/LICENSE-DejaVu.txt`).
+MIT: see [LICENSE](LICENSE).
+
+The bundled DejaVu fonts keep their own license (`services/web/healthcheck/fonts/LICENSE-DejaVu.txt`).

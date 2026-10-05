@@ -1,7 +1,7 @@
 {% extends "doc-pages/page.html" %}
 {% import "doc-pages/_macros.html" as m %}
 {% block body %}
-<p>{{ app_title }} tells you whether a domain's email is set up properly. Send one email to {{ m.address(v) }}
+<p>{{ app_title }} tells you whether a domain's email is set up properly. Send an email to {{ m.address(v) }}
     and you get a report back: can the domain send and receive email, and does its mail pass the
     authentication checks (SPF, DKIM and DMARC) that receiving servers use to decide what to trust.</p>
 <p>It's meant for the people who look after a domain's email. Send the test from the mail system you want to
