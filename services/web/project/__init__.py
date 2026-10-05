@@ -18,6 +18,7 @@ from healthcheck import report
 from healthcheck.mailer import reply_to
 from healthcheck.settings import settings
 from healthcheck.store import TOKEN, Store
+from project import docs as docs_module
 from project.docs import docs as docs_blueprint
 
 app = Flask(__name__, static_folder="assets")
@@ -132,6 +133,13 @@ def database_busy(error):
 def docs_link():
     """The "Documentation" link in the page header, when the docs are on (DOCS_ENABLED)."""
     return {"docs_enabled": settings.docs_enabled}
+
+
+@app.context_processor
+def how_to_send():
+    """The test address and poll interval for the homepage's "how to send a test" line (from the docs'
+    settings, read per request so tests can change them)."""
+    return {"test_address": docs_module.TEST_ADDRESS, "poll_seconds": docs_module.POLL_SECONDS}
 
 
 def custom_header_here():

@@ -5,6 +5,9 @@ Date-grouped, newest first.
 ## Unreleased
 
 ### Web page
+- The homepage now says how to send a test: the test address, how soon the report arrives, how to view the
+  report with the form below, and where to find the documentation.
+- The Docs link in the page header stands out more: an outlined button in the accent colour.
 - New settings `CUSTOM_HEADER_HTML` and `CUSTOM_HEADER_CSP`: add your own HTML to the `<head>` of every web page
   (visitor statistics and the like) and say what it may load. Inline scripts and styles are allowed by
   their hashes, the rest of the Content-Security-Policy stays as strict as before, and the code is left off

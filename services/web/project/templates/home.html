@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
 {% if missing_page %}<p class="empty">That page doesn't exist.{% if docs_enabled %} Try the <a href="{{ url_for('docs.index') }}">documentation</a>, or look up a report below.{% endif %}</p>{% endif %}
+<div class="intro">
+<p>Send an email to {% if test_address %}<code>{{ test_address }}</code>{% else %}the test address{% endif %}
+    from any email address on the domain you want to check, and the report will be emailed back to you with your results, usually within
+    {% if poll_seconds %}about {{ poll_seconds }} seconds{% else %}a minute or so{% endif %}.</p>
+<p>In addition to the email report you receive, you can also view the report using the below form, simply enter the email address you sent the
+    test from and click "<em>View Report</em>".</p>
+{% if docs_enabled %}<p>For more information, see the <a href="{{ url_for('docs.index') }}">documentation</a>.</p>{% endif %}
+</div>
 {% include "_form.html" %}
 {% endblock %}
