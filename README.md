@@ -47,8 +47,8 @@ every `POLL_SECONDS`, 30 in `.env.example`).
 
 ## Configuration
 
-Everything is set in `.env`, and `.env.example` lists and explains every setting. These are the ones you
-must fill in:
+Everything is set in `.env`, and `.env.example` lists and explains every setting. Its first section is the
+ones you must fill in, and everything below it is already set to the defaults:
 
 | Setting | What it's for |
 |---|---|
@@ -58,8 +58,9 @@ must fill in:
 | `TRUSTED_MX_HOSTS` | Your receiving mail servers' names, as written after `by` in their `Received:` headers |
 | `POLL_SECONDS` | Seconds between mailbox checks (at least 10) |
 
-The web page runs when `PUBLIC_URL` and `COMPOSE_PROFILES='web'` are set (as in `.env.example`). Point
-your reverse proxy at `WEB_BIND`. Leave both empty to run email-only: no web page, and no reports kept.
+The web page runs when `PUBLIC_URL` and `COMPOSE_PROFILES='web'` are set (as in `.env.example`). The first
+tells the app there's a web page, the second tells Docker Compose to start it. Point your reverse proxy at
+`WEB_BIND`. Leave both empty to run email-only: no web page, and no reports kept.
 
 ## Documentation
 

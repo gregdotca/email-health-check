@@ -1,13 +1,15 @@
 """Deployment settings, read once from the environment (the .env file). TRUSTED_MX_HOSTS is required;
 the rest are optional, and an empty value means the default. Without PUBLIC_URL there's no web page:
 the reports are only emailed, and nothing is kept for looking them up. A missing or bad value stops
-the app at startup with the setting's name. `.env.example` lists them all.
+the app at startup with the setting's name. `.env.example` lists them all. CUSTOM_HEADER_HTML is the
+operator's own HTML for the web pages (never in this repo), with CUSTOM_HEADER_CSP saying what it may load.
 
 The mail account settings (RECEIVING_EMAIL_*, SENDING_EMAIL_*, POLL_SECONDS) are read by poller.py.
 docker-compose.yml passes these to the web service one by one (never the whole .env, which holds the
 mail passwords), so a new setting here goes there too, and into .env.example.
 """
 import os
+import re
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -27,7 +29,17 @@ DEFAULTS = {
     "MAIL_PER_RECIPIENT_PER_DAY": "10",
     "MAIL_PER_DAY": "50",  # results emails in total, from everyone: a hard daily ceiling
     "DOCS_ENABLED": "True",  # the documentation at /docs/ on the web page (True or False)
+    "CUSTOM_HEADER_HTML": "",  # HTML added to the <head> of the web pages (visitor statistics and the like)
+    "CUSTOM_HEADER_CSP": "",  # what it may load, e.g. "script-src https://stats.example.com; connect-src ..."
 }
+# The Content-Security-Policy parts CUSTOM_HEADER_CSP may add sources to. The rest (default-src, form-action,
+# frame-ancestors, base-uri...) stay as the app sets them.
+CSP_DIRECTIVES = ("script-src", "style-src", "img-src", "connect-src", "font-src", "frame-src", "media-src",
+                  "worker-src", "manifest-src")
+# script-src sources that would run any inline script or onload= attribute, not just CUSTOM_HEADER_HTML's own blocks
+UNSAFE_SCRIPT_SOURCES = ("'unsafe-inline'", "'unsafe-hashes'", "data:", "'unsafe-eval'")
+# <script/> or <style/>: browsers ignore the slash and treat what follows as code, but the hashes would miss it
+SELF_CLOSED_CODE = re.compile(r"<\s*(script|style)\b[^>]*/\s*>", re.I)
 
 
 class SettingsError(ValueError):
@@ -49,6 +61,8 @@ class Settings:
     mail_per_recipient_per_day: int
     mail_per_day: int
     docs_enabled: bool
+    custom_header_html: str  # "": none
+    custom_header_csp: dict  # {directive: (source, ...)} added to the Content-Security-Policy
 
 
 def load(env=os.environ):
@@ -92,7 +106,43 @@ def load(env=os.environ):
         mail_per_recipient_per_day=whole("MAIL_PER_RECIPIENT_PER_DAY"),
         mail_per_day=whole("MAIL_PER_DAY"),
         docs_enabled=on_off("DOCS_ENABLED"),
+        custom_header_html=_custom_header(get("CUSTOM_HEADER_HTML")),
+        custom_header_csp=_csp_sources(get("CUSTOM_HEADER_CSP")),
     )
+
+
+def _custom_header(value):
+    """CUSTOM_HEADER_HTML as a browser reads it (a .env saved with Windows line endings), so the inline code's CSP
+    hashes match. A self-closed <script/> or <style/> is refused: its code would never get a hash."""
+    found = SELF_CLOSED_CODE.search(value)
+    if found:
+        raise SettingsError(f"CUSTOM_HEADER_HTML: write <{found[1].lower()}>...</{found[1].lower()}>, not "
+                            f"{found[0]!r} (browsers don't treat it as closed)")
+    return value.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _csp_sources(value):
+    """CUSTOM_HEADER_CSP, "script-src https://a.example.com; connect-src https://a.example.com", as
+    {"script-src": ("https://a.example.com",), ...}. Only the directives in CSP_DIRECTIVES, no 'none' or
+    commas (a comma would start a second policy), and nothing in script-src that runs any inline script."""
+    out = {}
+    for part in value.split(";"):
+        if not part.strip():
+            continue
+        directive, *sources = part.split()
+        if directive.lower() not in CSP_DIRECTIVES:
+            raise SettingsError(f"CUSTOM_HEADER_CSP can only add to {', '.join(CSP_DIRECTIVES)} (got {directive!r})")
+        bad = [s for s in sources if "," in s or s.lower() == "'none'"]
+        if not sources or bad:
+            raise SettingsError(f"CUSTOM_HEADER_CSP: {directive} needs sources, like https://stats.example.com, "
+                                f"without commas or 'none' (got {part.strip()!r})")
+        unsafe = [s for s in sources if s.lower() in UNSAFE_SCRIPT_SOURCES]
+        if directive.lower() == "script-src" and unsafe:
+            raise SettingsError(f"CUSTOM_HEADER_CSP: script-src can't allow {' '.join(unsafe)}: it would let any "
+                                f"inline script or code in a string run (put the code in a <script> block in "
+                                f"CUSTOM_HEADER_HTML instead)")
+        out[directive.lower()] = out.get(directive.lower(), ()) + tuple(sources)
+    return out
 
 
 def _plain_site(url):

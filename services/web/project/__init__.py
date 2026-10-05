@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
+import base64
+import hashlib
 import logging
 import math
 import os
 import re
 import sqlite3
 from datetime import UTC, datetime
+from html.parser import HTMLParser
 from urllib.parse import urlsplit
 
 from flask import Flask, abort, g, render_template, request
+from markupsafe import Markup
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from healthcheck import report
@@ -28,9 +32,56 @@ if not settings.public_url:
     logging.getLogger("project").warning("PUBLIC_URL isn't set: reports are only emailed, so this page won't find any")
 ADDRESS = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}$")
 
+CSP = {"default-src": ("'none'",), "style-src": ("'self'",), "img-src": ("'self'",), "form-action": ("'self'",),
+       "frame-ancestors": ("'none'",), "base-uri": ("'none'",)}
+
+
+class InlineCode(HTMLParser):
+    """The CSP hashes of CUSTOM_HEADER_HTML's inline <script> and <style> blocks, so they run without allowing
+    every inline script ('unsafe-inline'). Inline event handlers (onload=...) and style= attributes still
+    don't run: CUSTOM_HEADER_CSP can't allow them."""
+
+    def __init__(self, html):
+        super().__init__(convert_charrefs=False)
+        self.hashes, self.open, self.text = {"script-src": (), "style-src": ()}, None, []
+        self.feed(html)
+        self.close()
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("script", "style") and not (tag == "script" and dict(attrs).get("src")):
+            self.open, self.text = tag, []
+
+    def handle_data(self, data):
+        if self.open:
+            self.text.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == self.open:
+            digest = base64.b64encode(hashlib.sha256("".join(self.text).encode()).digest()).decode()
+            self.hashes[tag + "-src"] += (f"'sha256-{digest}'",)
+            self.open = None
+
+
+def csp(*extras):
+    """The Content-Security-Policy, with each {directive: sources} in extras added (replacing a 'none')."""
+    policy = dict(CSP)
+    for extra in extras:
+        for directive, sources in extra.items():
+            if sources:
+                kept = tuple(s for s in policy.get(directive, ()) if s != "'none'")
+                policy[directive] = tuple(dict.fromkeys(kept + tuple(sources)))
+    return "; ".join(f"{d} {' '.join(sources)}" for d, sources in policy.items())
+
+
+# CUSTOM_HEADER_HTML (the operator's own code: visitor statistics and the like) goes on every page but the report
+# links, whose address (/<token>) opens a report: it mustn't reach someone else's statistics. Pages no
+# route matched (404s) go without it too.
+CUSTOM_HEADER_HTML = Markup(settings.custom_header_html)
+NO_CUSTOM_HEADER_HTML = ("link_page", "link_results")
+PLAIN_CSP = csp()
+CUSTOM_CSP = csp(InlineCode(settings.custom_header_html).hashes, settings.custom_header_csp) if CUSTOM_HEADER_HTML else PLAIN_CSP
+
 SECURITY_HEADERS = {
-    "Content-Security-Policy": "default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; "
-                               "frame-ancestors 'none'; base-uri 'none'",
     "Referrer-Policy": "no-referrer",
     "X-Robots-Tag": "noindex, nofollow",
     "X-Content-Type-Options": "nosniff",
@@ -46,6 +97,7 @@ def store():
 
 @app.after_request
 def security_headers(response):
+    response.headers.setdefault("Content-Security-Policy", CUSTOM_CSP if custom_header_here() else PLAIN_CSP)
     for name, value in SECURITY_HEADERS.items():
         response.headers.setdefault(name, value)
     return response
@@ -80,6 +132,18 @@ def database_busy(error):
 def docs_link():
     """The "Documentation" link in the page header, when the docs are on (DOCS_ENABLED)."""
     return {"docs_enabled": settings.docs_enabled}
+
+
+def custom_header_here():
+    """Not on the report links, nor on a page no route matched (/<token>/, /<token>/x... are 404s whose
+    address still holds a token)."""
+    return bool(CUSTOM_HEADER_HTML) and request.endpoint is not None and request.endpoint not in NO_CUSTOM_HEADER_HTML
+
+
+@app.context_processor
+def custom_header_html():
+    """CUSTOM_HEADER_HTML for base.html's <head>, except on the report links."""
+    return {"custom_header_html": CUSTOM_HEADER_HTML if custom_header_here() else ""}
 
 
 @app.errorhandler(404)

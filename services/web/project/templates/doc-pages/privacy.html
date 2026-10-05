@@ -46,7 +46,12 @@
 
 <h2 id="website">The website</h2>
 <ul>
+    {% if v.custom_header_html %}
+    <li>The people who run this website have added their own code to its pages, such as visitor statistics,
+        which may load from other websites. It's left off the pages that report links open.</li>
+    {% else %}
     <li>No cookies, no tracking, no JavaScript and nothing loaded from other websites.</li>
+    {% endif %}
     <li>Search engines are asked not to index any of it.</li>
     <li>Forms posted from other websites are refused, so another site can't look up a report and start its
         clock.</li>

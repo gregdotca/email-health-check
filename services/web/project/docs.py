@@ -110,7 +110,7 @@ PAGES = (
     Page("settings", "Settings", "Running your own",
          "Every setting in the .env file, with its default.",
          (("mail", "Mail"), ("website", "Website and Compose"), ("app", "Reports and limits"),
-          ("values", "Allowed values"))),
+          ("custom-header", "Your own code in the pages"), ("values", "Allowed values"))),
     Page("operations", "Running and updating", "Running your own",
          "Logs, updates, data and what the poller's log messages mean.",
          (("logs", "Logs"), ("updating", "Updating"), ("data", "Data"), ("log-messages", "Log messages"))),
@@ -131,6 +131,7 @@ def values():
     return {
         "address": TEST_ADDRESS, "poll_seconds": POLL_SECONDS, "public_url": settings.public_url,
         "timezone": str(settings.display_timezone),
+        "custom_header_html": bool(settings.custom_header_html),  # whether the pages carry the operator's own code
         "mail_hour": dict(store.MAIL_LIMITS)[3600], "mail_day": dict(store.MAIL_LIMITS)[86400],
         "mail_total": dict(store.MAIL_DAILY_LIMIT)[86400],
         "unviewed_hours": store.UNVIEWED_SECONDS // 3600, "viewed_minutes": store.VIEWED_SECONDS // 60,

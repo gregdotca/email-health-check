@@ -32,7 +32,8 @@ cp .env.example .env</pre>
     </li>
     <li>
         <h3>Fill in <code>.env</code></h3>
-        <p>Set the mailbox, SMTP and <code>TRUSTED_MX_HOSTS</code> settings (all of them are described in
+        <p>Fill in the first section of <code>.env</code>: the mailbox, SMTP, <code>TRUSTED_MX_HOSTS</code> and
+            website settings. Everything below it is already set to the defaults (all of them are described in
             <a href="{{ url_for('docs.page', slug='settings') }}">Settings</a>). For <code>TRUSTED_MX_HOSTS</code>,
             use the names your receiving server writes after <code>by</code> in the <code>Received:</code> headers of
             mail it accepts (usually its MX host names), including any backup MX. If you're not sure, send yourself
@@ -70,6 +71,11 @@ cp .env.example .env</pre>
     <dd>Leave <code>PUBLIC_URL</code> and <code>COMPOSE_PROFILES</code> empty. Only the poller runs, the emails have
         no link to a website, and no reports are kept.</dd>
 </dl>
+<p>The two settings do different jobs. <code>PUBLIC_URL</code> tells the app there's a website, so the emails link
+    to it and reports are kept for looking up. <code>COMPOSE_PROFILES</code> is Docker Compose's own setting: the
+    website's container is in a Compose profile named <code>web</code>, which Compose only starts when
+    <code>COMPOSE_PROFILES</code> includes it. Set both, or neither: with only <code>PUBLIC_URL</code>, the emails
+    link to a website that isn't running.</p>
 <p>To switch a running copy to email-only, stop the website first with
     <code>docker compose --profile web stop web</code>, then clear both settings and run
     <code>docker compose up -d</code>. Reports already saved expire as usual.</p>

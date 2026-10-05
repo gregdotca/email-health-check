@@ -27,10 +27,11 @@
     <thead><tr><th>Setting</th><th>Default</th><th>What it's for</th></tr></thead>
     <tbody>
         <tr><td><code>PUBLIC_URL</code></td><td>none (email-only)</td><td>The website's address, such as <code>https://check.example.com</code>, with no path. The report emails link to it.</td></tr>
-        <tr><td><code>COMPOSE_PROFILES</code></td><td>none (email-only)</td><td><code>web</code> to run the website (read by Docker Compose).</td></tr>
+        <tr><td><code>COMPOSE_PROFILES</code></td><td>none (email-only)</td><td><code>web</code> to run the website. This one is read by Docker Compose, not the app: the website is a Compose profile named <code>web</code>, and Compose only starts it when this turns it on. Set it together with <code>PUBLIC_URL</code>, which tells the app the website exists.</td></tr>
         <tr><td><code>DOCS_ENABLED</code></td><td><code>{{ defaults.DOCS_ENABLED }}</code></td><td>This documentation, at <code>/docs/</code>, with links to it from the website and the report emails. <code>False</code> turns it off.</td></tr>
         <tr><td><code>WEB_BIND</code></td><td><code>127.0.0.1:8080</code></td><td>Where the website listens on the host, as IP:port.</td></tr>
         <tr><td><code>TRUSTED_PROXY_HOPS</code></td><td><code>{{ defaults.TRUSTED_PROXY_HOPS }}</code></td><td>How many reverse proxies are in front of the website (<code>0</code> if none), so the lookup limits see each visitor's real IP address.</td></tr>
+        <tr><td><code>CUSTOM_HEADER_HTML</code>, <code>CUSTOM_HEADER_CSP</code></td><td>none</td><td>Your own HTML for the website's pages, such as visitor statistics, and what it may load (see <a href="#custom-header">below</a>).</td></tr>
         <tr><td><code>CONTAINER_NAME</code></td><td><code>health-check</code></td><td>Container names: this, and this plus <code>-poller</code>. Each copy on a host needs its own.</td></tr>
     </tbody>
 </table>
@@ -49,6 +50,27 @@
         <tr><td><code>MAIL_PER_DAY</code></td><td><code>{{ defaults.MAIL_PER_DAY }}</code></td><td>Report emails in total, from everyone: a hard daily ceiling.</td></tr>
     </tbody>
 </table>
+
+<h2 id="custom-header">Your own code in the pages</h2>
+<p><code>CUSTOM_HEADER_HTML</code> adds your own HTML to the <code>&lt;head&gt;</code> of every page on the website, this
+    documentation included, such as the script for a visitor statistics service. It's left off the pages that
+    report links open, since their address is the key to a report and shouldn't reach anyone else's records,
+    and off pages that don't exist.
+    Wrap the HTML in single quotes in <code>.env</code> and write <code>\'</code> for a quote inside it. It can
+    span several lines.</p>
+<pre><code>CUSTOM_HEADER_HTML='&lt;script defer src="https://stats.example.com/script.js"&gt;&lt;/script&gt;'
+CUSTOM_HEADER_CSP='script-src https://stats.example.com; connect-src https://stats.example.com'</code></pre>
+<p>The pages' Content-Security-Policy blocks anything not allowed by name, so <code>CUSTOM_HEADER_CSP</code> lists
+    what your code may load, directive by directive, separated by semicolons. It can add to
+    <code>script-src</code>, <code>connect-src</code>, <code>img-src</code>, <code>style-src</code>,
+    <code>font-src</code>, <code>frame-src</code>, <code>media-src</code>, <code>worker-src</code> and
+    <code>manifest-src</code>. Inline <code>&lt;script&gt;</code> and <code>&lt;style&gt;</code> blocks in
+    <code>CUSTOM_HEADER_HTML</code> are allowed automatically, by their hashes. Attributes like <code>onload=</code> and
+    <code>style=</code> aren't, so put that code in a block instead. For the same reason <code>script-src</code>
+    can't take <code>'unsafe-inline'</code>, <code>'unsafe-hashes'</code>, <code>data:</code> or
+    <code>'unsafe-eval'</code>, which would let any inline script, or code in a string, run. Write script and
+    style blocks out in full (<code>&lt;script&gt;...&lt;/script&gt;</code>), not as <code>&lt;script/&gt;</code>. The pages send no referrer, so requests your
+    code makes don't carry the page's address unless the code sends it itself (statistics scripts do).</p>
 
 <h2 id="values">Allowed values</h2>
 <p>Retention times and lookup and email limits must be whole numbers of at least 1: zero doesn't turn them off.

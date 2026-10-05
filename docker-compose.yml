@@ -29,6 +29,9 @@ services:
       - MAIL_PER_RECIPIENT_PER_DAY=${MAIL_PER_RECIPIENT_PER_DAY:-}
       - MAIL_PER_DAY=${MAIL_PER_DAY:-}
       - DOCS_ENABLED=${DOCS_ENABLED:-}
+      # your own HTML for the pages' <head> (visitor statistics and the like), and what it may load
+      - CUSTOM_HEADER_HTML=${CUSTOM_HEADER_HTML:-}
+      - CUSTOM_HEADER_CSP=${CUSTOM_HEADER_CSP:-}
       # shown in the documentation: the address to send tests to, and how often it's checked
       - RECEIVING_EMAIL_ADDRESS=${RECEIVING_EMAIL_ADDRESS:-}
       - POLL_SECONDS=${POLL_SECONDS:-}

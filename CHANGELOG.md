@@ -4,6 +4,14 @@ Date-grouped, newest first.
 
 ## Unreleased
 
+### Web page
+- New settings `CUSTOM_HEADER_HTML` and `CUSTOM_HEADER_CSP`: add your own HTML to the `<head>` of every web page
+  (visitor statistics and the like) and say what it may load. Inline scripts and styles are allowed by
+  their hashes, the rest of the Content-Security-Policy stays as strict as before, and the code is left off
+  the pages that report links open. The privacy page says when a site carries such code.
+- `.env.example` now starts with the settings you must fill in, followed by every optional setting already
+  set to its default.
+
 ### Documentation
 - Documentation on the web page at `/docs/`: sending a test, viewing reports online, reading the report
   and its summary, a page per check (PTR, SPF, DKIM, DMARC) with every result and how to fix it,

@@ -9,6 +9,9 @@
     <title>{% block title %}{{ app_title }}{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {%- if custom_header_html %}
+    {{ custom_header_html }}
+    {%- endif %}
 </head>
 <body>
 {% block page %}
