@@ -29,7 +29,9 @@ Date-grouped, newest first.
   you type, with the matching words highlighted. Press `/` to jump to it, the arrow keys to pick a
   result, and Enter to open it (or the full list of results). It searches in the browser with a small script
   of the website's own, allowed on the documentation's pages only. Without JavaScript the box still works:
-  Enter opens a results page. Email addresses aren't searched.
+  Enter opens a results page listing every match. Email addresses aren't searched. Highlighted words stay
+  readable in dark mode, long words wrap on phones, and a page that fails to load is left out of the search
+  rather than breaking it.
 - README brought in line with the documentation: the first report arrives "within a minute or so" (was
   "about 30 seconds"), the docs name the test address only with `IS_PUBLIC_INSTANCE=True`, the first section
   of `.env.example` starts with `IS_PUBLIC_INSTANCE`, retention times are the defaults, and SMTP may run
