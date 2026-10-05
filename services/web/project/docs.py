@@ -6,11 +6,15 @@ and the code, so the docs always describe the instance they're on. Unless IS_PUB
 /docs and the old-style /help and /documentation addresses redirect (301) to /docs/; each page lives
 at /docs/<slug>/ and its slash-less form redirects there. With DOCS_ENABLED=False they're all 404s.
 """
+import json
+import logging
 import os
+import re
 from dataclasses import dataclass, field
-from functools import cache
+from functools import cache, lru_cache
+from html.parser import HTMLParser
 
-from flask import Blueprint, abort, redirect, render_template, url_for
+from flask import Blueprint, abort, current_app, redirect, render_template, request, url_for
 
 from healthcheck import poller, report, store, summary_image
 from healthcheck.analyze import MAX_HEADER_BYTES
@@ -179,6 +183,151 @@ def explanations():
             "dmarc_policy": POLICY_EFFECT}
 
 
+# ---- Search: every page split at its headings that have an id (the h2s, the questions on Common questions, the
+# glossary's terms), searched in the browser as you type (assets/search.js) and here without JavaScript
+# (/docs/search/). Both match, rank and cut snippets the same way: change search() and search.js together
+# (tests/test_docs.py runs the two side by side). Queries with an @ aren't searched: an address doesn't belong
+# in a URL, and the docs hold none worth finding.
+SEARCH_PAGE = Page("search", "Search", "Documentation", "Search every page of the documentation.")
+MAX_QUERY = 100  # characters
+# What separates words in a query: Python's whitespace and JavaScript's, spelled out so both split the same
+SPACE = re.compile(r"[\t\n\v\f\r \x1c-\x1f\x85\xa0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+")
+MAX_TERMS = 8
+EDGE_PUNCTUATION = "\"'“”‘’,;:!?()[]"  # stripped from the ends of each term
+SNIPPET_BEFORE, SNIPPET_LENGTH = 60, 180  # characters of text around the first match
+INLINE = {"a", "abbr", "b", "code", "em", "i", "kbd", "mark", "small", "span", "strong", "sub", "sup"}
+
+
+class Sections(HTMLParser):
+    """A page body's text, split at each h2, h3 or dt with an id: [anchor, heading, text] ("" for the part before
+    the first one)."""
+
+    def __init__(self, html):
+        super().__init__()
+        self.sections, self.heading = [["", [], []]], None
+        self.feed(html)
+        self.close()
+
+    def handle_starttag(self, tag, attrs):
+        anchor = dict(attrs).get("id")
+        if tag in ("h2", "h3", "dt") and anchor:
+            self.sections.append([anchor, [], []])
+            self.heading = tag
+        elif tag not in INLINE:
+            self.handle_data(" ")
+
+    def handle_endtag(self, tag):
+        if tag == self.heading:
+            self.heading = None
+        elif tag not in INLINE:
+            self.handle_data(" ")
+
+    def handle_data(self, data):
+        self.sections[-1][1 if self.heading else 2].append(data)
+
+    def result(self):
+        squash = lambda parts: " ".join("".join(parts).split())  # noqa: E731
+        return [(anchor, squash(heading), squash(text)) for anchor, heading, text in self.sections]
+
+
+def search_index():
+    """[{url, heading, where, page, text}] for every page and section, in reading order, with this installation's
+    values filled in (built once per set of values)."""
+    return _search_index(json.dumps([values(), settings.app_name, current_app.jinja_env.globals.get("app_title")],
+                                    sort_keys=True, default=str))
+
+
+@lru_cache(maxsize=4)
+def _search_index(_values):
+    entries = []
+    for page in PAGES:
+        try:
+            # Without CUSTOM_HEADER_HTML: the operator's code in <head> mustn't be read as part of a page
+            html = render(page, custom_header_html="")
+            html = html.split('<div class="docs-body">', 1)[1].split('<nav class="docs-pager"', 1)[0]
+        except Exception:
+            # One broken page mustn't take the whole search down: leave it out (the page itself shows the error)
+            logging.getLogger("project").exception("Search left out /docs/%s/: the page failed to render", page.slug)
+            continue
+        (_, _, intro), *sections = Sections(html).result()
+        lead = page.lead.replace("{app}", settings.app_name)
+        entries.append({"url": page.url, "heading": page.title, "where": page.group, "page": page.title,
+                        "text": f"{lead} {intro}".strip()})
+        for anchor, heading, text in sections:
+            entries.append({"url": f"{page.url}#{anchor}", "heading": heading, "where": f"{page.group} › {page.title}",
+                            "page": page.title, "text": text})
+    return tuple(entries)
+
+
+def fold(text):
+    """Lower case, one character for one, so positions found in it are positions in the text (a character whose
+    lower case is longer, like İ, stays as it is). search.js does the same."""
+    return "".join(low if len(low := c.lower()) == 1 else c for c in text)
+
+
+def squash(query):
+    """The query's words, one space apart, cut to MAX_QUERY characters."""
+    return " ".join(SPACE.split(query)).strip(" ")[:MAX_QUERY]
+
+
+def search_terms(query):
+    """The lower-case words of a query (at most MAX_TERMS, each once), or None for one that holds an address
+    (anywhere in it, even past MAX_QUERY)."""
+    if "@" in query:
+        return None
+    terms = (t.strip(EDGE_PUNCTUATION) for t in fold(squash(query)).split(" "))
+    return list(dict.fromkeys(t for t in terms if t))[:MAX_TERMS]
+
+
+def search(terms, index):
+    """The entries holding every term, best first: a term in the heading counts most, then in the page's title,
+    then each time it's in the text (up to three). The whole query in the heading or text counts extra."""
+    phrase = " ".join(terms)
+    found = []
+    for i, entry in enumerate(index):
+        heading, page, text = fold(entry["heading"]), fold(entry["page"]), fold(entry["text"])
+        if not terms or any(t not in heading and t not in page and t not in text for t in terms):
+            continue
+        score = sum(8 * (t in heading) + 2 * (t in page) + min(text.count(t), 3) for t in terms)
+        if len(terms) > 1:
+            score += 10 * (phrase in heading) + 4 * (phrase in text)
+        found.append((-score, i, entry))
+    return [entry for _, _, entry in sorted(found, key=lambda f: f[:2])]
+
+
+def snippet(text, terms):
+    """About SNIPPET_LENGTH characters of text around the first term found in it, cut at spaces."""
+    low = fold(text)
+    first = min((p for p in (low.find(t) for t in terms) if p >= 0), default=0)
+    start = max(0, first - SNIPPET_BEFORE)
+    if start:
+        space = text.find(" ", start)
+        start = space + 1 if 0 <= space < first else start
+    end = start + SNIPPET_LENGTH
+    if end < len(text):
+        space = text.rfind(" ", start, end)
+        end = space if space > first else end
+    return ("… " if start else "") + text[start:end].strip() + (" …" if end < len(text) else "")
+
+
+def highlight(text, terms):
+    """[(part, matched)] with every term marked, longer terms first where they overlap."""
+    low, parts, i = fold(text), [], 0
+    ordered = sorted(terms, key=len, reverse=True)
+    while i < len(text):
+        term = next((t for t in ordered if low.startswith(t, i)), None)
+        if term:
+            parts.append((text[i:i + len(term)], True))
+            i += len(term)
+        else:
+            if parts and not parts[-1][1]:
+                parts[-1] = (parts[-1][0] + text[i], False)
+            else:
+                parts.append((text[i], False))
+            i += 1
+    return parts
+
+
 @docs.before_request
 def enabled():
     if not settings.docs_enabled:
@@ -191,10 +340,10 @@ def page_context():
             "defaults": DEFAULTS}
 
 
-def render(page):
+def render(page, **extra):
     i = PAGES.index(page)
     return render_template(page.template, page=page, prev=PAGES[i - 1] if i else None,
-                           next=PAGES[i + 1] if i + 1 < len(PAGES) else None)
+                           next=PAGES[i + 1] if i + 1 < len(PAGES) else None, **extra)
 
 
 @docs.route("/docs/", merge_slashes=False)
@@ -219,6 +368,31 @@ def page_no_slash(slug):
     if slug not in BY_SLUG or not slug:
         abort(404)
     return redirect(url_for("docs.page", slug=slug), 301)
+
+
+@docs.route("/docs/search/", merge_slashes=False)
+def search_page():
+    """The search box's results without JavaScript (or after Enter): /docs/search/?q=words."""
+    raw = request.args.get("q", "")
+    query, terms = squash(raw), search_terms(raw)
+    found = search(terms, search_index()) if terms else []
+    results = [{**entry, "heading": highlight(entry["heading"], terms),
+                "text": highlight(snippet(entry["text"], terms), terms)} for entry in found]
+    return render_template("doc-pages/search.html", page=SEARCH_PAGE, prev=None, next=None,
+                           query="" if terms is None else query, address=terms is None, results=results)
+
+
+@docs.route("/docs/search", merge_slashes=False)
+def search_no_slash():
+    query = request.args.get("q")
+    return redirect(url_for("docs.search_page", **({"q": query} if query is not None else {})), 301)
+
+
+@docs.route("/docs/search.json", merge_slashes=False)
+def search_json():
+    """The index the search box searches as you type. It's what the pages say, so browsers may keep it a while."""
+    return json.dumps(search_index(), ensure_ascii=False, separators=(",", ":")), {
+        "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=600"}
 
 
 @docs.route("/docs/example-summary.png", merge_slashes=False)

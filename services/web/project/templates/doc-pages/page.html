@@ -1,9 +1,11 @@
 {% extends "base.html" %}
-{#- The documentation's layout: a sidebar with every page (a "Contents" menu on narrow screens), the page,
+{#- The documentation's layout: a sidebar with the search box and every page (on narrow screens the search box
+    sits above the page and the list becomes a "Contents" menu), the page,
     "On this page" links (beside it on wide screens), then previous/next. Pages fill in the body block;
     their h2 ids must match page.toc (docs.py). -#}
 {% import "doc-pages/_macros.html" as m %}
 {% block title %}{{ page.title }} · {{ app_title }} Documentation{% endblock %}
+{% block head %}<script src="{{ url_for('static', filename='search.js') }}" defer></script>{% endblock %}
 {% block page %}
 <div class="docs">
     <header class="docs-header">
@@ -11,7 +13,10 @@
         <a class="docs-cta" href="/">Look up a report</a>
     </header>
     <div class="docs-layout">
-        <nav class="docs-nav" aria-label="Documentation">{{ m.nav(pages, groups, page) }}</nav>
+        <div class="docs-side">
+            {{ m.search_box(query|default("")) }}
+            <nav class="docs-nav" aria-label="Documentation">{{ m.nav(pages, groups, page) }}</nav>
+        </div>
         <main class="docs-main">
             <details class="docs-menu">
                 <summary>Contents</summary>

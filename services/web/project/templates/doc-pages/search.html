@@ -1,0 +1,27 @@
+{% extends "doc-pages/page.html" %}
+{% import "doc-pages/_macros.html" as m %}
+{#- /docs/search/?q=words: the search box's results without JavaScript, or after pressing Enter (docs.search_page) -#}
+{% block body %}
+{% if address %}
+<p class="callout note">The search doesn't take email addresses. To find a report, <a href="/">look it up by the
+    address you sent the test from</a>.</p>
+{% elif not query %}
+<p>Type a word or two in the search box, such as <a href="{{ url_for('docs.search_page', q='alignment') }}">alignment</a>,
+    <a href="{{ url_for('docs.search_page', q='no report') }}">no report</a> or
+    <a href="{{ url_for('docs.search_page', q='forwarding') }}">forwarding</a>.</p>
+{% elif not results %}
+<p class="docs-results-count">Nothing found for <strong>{{ query }}</strong>. Try fewer or shorter words, or browse the pages in the
+    list.</p>
+{% else %}
+<p class="docs-results-count">{{ results|length }} result{{ "s" if results|length != 1 }} for <strong>{{ query }}</strong>.</p>
+<ol class="docs-results">
+    {% for r in results %}
+    <li>
+        <a href="{{ r.url }}">{{ m.marked(r.heading) }}</a>
+        <p class="docs-results-where">{{ r.where }}</p>
+        <p>{{ m.marked(r.text) }}</p>
+    </li>
+    {% endfor %}
+</ol>
+{% endif %}
+{% endblock %}

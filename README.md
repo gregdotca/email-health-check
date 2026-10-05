@@ -18,7 +18,7 @@ check, and the report shows what a receiving server sees.
 - **Checks the whole record, not just this message:** SPF lookup limits, broken includes, invalid DMARC
   policies and DKIM signatures that only cover your mail service are all pointed out.
 - **Shareable:** the report email includes the summary as a picture, plus the full message headers.
-- **Optional web page** to look a report up by address, with built-in documentation at `/docs/`.
+- **Optional web page** to look a report up by address, with built-in, searchable documentation at `/docs/`.
 - **Private by design:** message bodies are never stored, test messages are deleted once they've been
   handled, and reports online expire within a day by default (minutes after they're first viewed).
 - **Self-hosted:** one Docker image, configured entirely from a `.env` file.

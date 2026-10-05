@@ -49,3 +49,30 @@
 {% macro result(word, text) -%}
 <tr><td><span class="badge {{ word|verdict }}">{{ word }}</span></td><td>{{ text }}</td></tr>
 {%- endmacro %}
+
+{#- The search box, at the top of the sidebar (above the page on narrow screens). Without JavaScript it's a plain
+    form: Enter opens /docs/search/. assets/search.js adds the list of results as you type. -#}
+{% macro search_box(query) -%}
+<form class="docs-search" role="search" action="{{ url_for('docs.search_page') }}" method="get"
+      data-index="{{ url_for('docs.search_json') }}">
+    <label class="visually-hidden" for="docs-search-q">Search the documentation</label>
+    <div class="docs-search-field">
+        <svg class="docs-search-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="8.5" cy="8.5" r="5.75"/><path d="m13 13 4.5 4.5"/></svg>
+        <input id="docs-search-q" type="search" name="q" value="{{ query }}" placeholder="Search the docs"
+               maxlength="100" pattern="[^@]*" title="The search doesn't take email addresses"
+               autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <kbd class="docs-search-key" aria-hidden="true">/</kbd>
+    </div>
+    <p class="visually-hidden" id="docs-search-status" role="status"></p>
+    <div class="docs-search-panel" hidden>
+        <ul class="docs-search-list" id="docs-search-list" role="listbox" aria-label="Search results"></ul>
+        <p class="docs-search-message" hidden></p>
+        <a class="docs-search-all" href="{{ url_for('docs.search_page') }}">See all results</a>
+    </div>
+</form>
+{%- endmacro %}
+
+{#- Text from search(): [(part, matched)], the matched parts marked -#}
+{% macro marked(parts) -%}
+{% for part, matched in parts %}{% if matched %}<mark>{{ part }}</mark>{% else %}{{ part }}{% endif %}{% endfor %}
+{%- endmacro %}

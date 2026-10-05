@@ -28,7 +28,7 @@
     <tbody>
         <tr><td><code>PUBLIC_URL</code></td><td>none (email-only)</td><td>The website's address, such as <code>https://check.example.com</code>, with no path. The report emails link to it.</td></tr>
         <tr><td><code>COMPOSE_PROFILES</code></td><td>none (email-only)</td><td><code>web</code> to run the website. This one is read by Docker Compose, not the app: the website is a Compose profile named <code>web</code>, and Compose only starts it when this turns it on. Set it together with <code>PUBLIC_URL</code>, which tells the app the website exists.</td></tr>
-        <tr><td><code>DOCS_ENABLED</code></td><td><code>{{ defaults.DOCS_ENABLED }}</code></td><td>This documentation, at <code>/docs/</code>, with links to it from the website and the report emails. <code>False</code> turns it off.</td></tr>
+        <tr><td><code>DOCS_ENABLED</code></td><td><code>{{ defaults.DOCS_ENABLED }}</code></td><td>This documentation, at <code>/docs/</code>, with its search box and links to it from the website and the report emails. <code>False</code> turns it off.</td></tr>
         <tr><td><code>IS_PUBLIC_INSTANCE</code></td><td><code>{{ defaults.IS_PUBLIC_INSTANCE }}</code></td><td><code>True</code> for a website meant for anyone: the home page says how to send a test (the test address, how soon the report arrives and how to view it), and these docs name the test address, how often it's checked, the address the reports come from and the time zone. <code>False</code> keeps those off the website: the home page is just the form, and these docs say "the test address" without naming it. A report viewed on the website still shows it in the full email headers, which are the test message's own.</td></tr>
         <tr><td><code>WEB_BIND</code></td><td><code>127.0.0.1:8080</code></td><td>Where the website listens on the host, as IP:port.</td></tr>
         <tr><td><code>TRUSTED_PROXY_HOPS</code></td><td><code>{{ defaults.TRUSTED_PROXY_HOPS }}</code></td><td>How many reverse proxies are in front of the website (<code>0</code> if none), so the lookup limits see each visitor's real IP address.</td></tr>
@@ -61,7 +61,8 @@
     span several lines.</p>
 <pre><code>CUSTOM_HEADER_HTML='&lt;script defer src="https://stats.example.com/script.js"&gt;&lt;/script&gt;'
 CUSTOM_HEADER_CSP='script-src https://stats.example.com; connect-src https://stats.example.com'</code></pre>
-<p>The pages' Content-Security-Policy blocks anything not allowed by name, so <code>CUSTOM_HEADER_CSP</code> lists
+<p>The pages' Content-Security-Policy blocks anything not allowed by name (the documentation's pages also allow
+    the website's own search script and its index, as <code>'self'</code>), so <code>CUSTOM_HEADER_CSP</code> lists
     what your code may load, directive by directive, separated by semicolons. It can add to
     <code>script-src</code>, <code>connect-src</code>, <code>img-src</code>, <code>style-src</code>,
     <code>font-src</code>, <code>frame-src</code>, <code>media-src</code>, <code>worker-src</code> and

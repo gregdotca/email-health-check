@@ -44,6 +44,8 @@
     <a class="docs-card" href="{{ p.url }}"><strong>{{ p.title }}</strong><span>{{ p.lead }}</span></a>
     {% endfor %}
 </div>
+<p>Looking for something in particular? Type a word or two in the search box above the list of pages (press
+    <kbd>/</kbd> to jump to it).</p>
 <p>Running your own copy? Start with <a href="{{ url_for('docs.page', slug='how-it-works') }}">How it works</a>
     and <a href="{{ url_for('docs.page', slug='setup') }}">Requirements and setup</a>.</p>
 {% endblock %}

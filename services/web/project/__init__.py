@@ -81,6 +81,12 @@ CUSTOM_HEADER_HTML = Markup(settings.custom_header_html)
 NO_CUSTOM_HEADER_HTML = ("link_page", "link_results")
 PLAIN_CSP = csp()
 CUSTOM_CSP = csp(InlineCode(settings.custom_header_html).hashes, settings.custom_header_csp) if CUSTOM_HEADER_HTML else PLAIN_CSP
+# The documentation's pages also run its search box (assets/search.js), which fetches /docs/search.json: the only
+# JavaScript of our own, and only there
+DOCS_SEARCH = {"script-src": ("'self'",), "connect-src": ("'self'",)}
+PLAIN_DOCS_CSP = csp(DOCS_SEARCH)
+CUSTOM_DOCS_CSP = csp(DOCS_SEARCH, InlineCode(settings.custom_header_html).hashes,
+                      settings.custom_header_csp) if CUSTOM_HEADER_HTML else PLAIN_DOCS_CSP
 
 SECURITY_HEADERS = {
     "Referrer-Policy": "no-referrer",
@@ -98,7 +104,11 @@ def store():
 
 @app.after_request
 def security_headers(response):
-    response.headers.setdefault("Content-Security-Policy", CUSTOM_CSP if custom_header_here() else PLAIN_CSP)
+    if request.blueprint == "docs":
+        policy = CUSTOM_DOCS_CSP if custom_header_here() else PLAIN_DOCS_CSP
+    else:
+        policy = CUSTOM_CSP if custom_header_here() else PLAIN_CSP
+    response.headers.setdefault("Content-Security-Policy", policy)
     for name, value in SECURITY_HEADERS.items():
         response.headers.setdefault(name, value)
     return response

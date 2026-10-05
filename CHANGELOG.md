@@ -25,6 +25,11 @@ Date-grouped, newest first.
   set to its default.
 
 ### Documentation
+- Search: a search box at the top of the documentation's sidebar (above the page on phones) shows results as
+  you type, with the matching words highlighted. Press `/` to jump to it, the arrow keys to pick a
+  result, and Enter to open it (or the full list of results). It searches in the browser with a small script
+  of the website's own, allowed on the documentation's pages only. Without JavaScript the box still works:
+  Enter opens a results page. Email addresses aren't searched.
 - README brought in line with the documentation: the first report arrives "within a minute or so" (was
   "about 30 seconds"), the docs name the test address only with `IS_PUBLIC_INSTANCE=True`, the first section
   of `.env.example` starts with `IS_PUBLIC_INSTANCE`, retention times are the defaults, and SMTP may run
