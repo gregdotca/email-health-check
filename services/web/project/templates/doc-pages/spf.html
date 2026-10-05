@@ -4,7 +4,7 @@
 <h2 id="what-it-proves">What it proves</h2>
 <p>SPF (Sender Policy Framework) lets a domain publish, in a DNS TXT record, which servers may send its mail.
     A typical record looks like this:</p>
-<pre>v=spf1 include:_spf.mailservice.example.net ip4:192.0.2.25 -all</pre>
+<pre>v=spf1 include:_spf.mailservice.example.org ip4:192.0.2.25 -all</pre>
 <p>The check asks whether the server that delivered the test is allowed to send for the domain of the
     <strong>envelope sender</strong> (the Return-Path, where bounces go). That's often the same domain as the
     From: address, but a mail service may use its own. <a href="{{ url_for('docs.page', slug='dmarc') }}#alignment">DMARC

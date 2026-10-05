@@ -5,13 +5,13 @@
     check. Explanations only appear for checks that don't pass, so a healthy domain's report is short.</p>
 
 <h2 id="email">The email</h2>
-<p>The report arrives as a reply to your test, from <strong>{{ app_title }}</strong>, with the subject
-    <code>Report for yourdomain.com</code>. It has a plain-text and an HTML version with the same content, and
+<p>The report arrives as a reply to your test{% if v.report_from_name or v.report_from %}, from {{ m.sender(v) }}{% endif %}, with the subject
+    <code>Report for example.com</code>. It has a plain-text and an HTML version with the same content, and
     two attachments (see <a href="#attachments">Attachments</a>).
     {% if v.public_url %}It ends with a link to the same report on this website.{% endif %}</p>
 <p>It's sent as a reply, so most mail programs show it in the same conversation as your test, and it's marked
     as an automatic reply so other auto-responders (such as out-of-office replies) don't answer it.</p>
-<p>Times are shown in the {{ v.timezone }} time zone, like this: <em>{{ v.example_time }}</em>.</p>
+<p>Times are shown in {% if v.timezone %}the {{ v.timezone }}{% else %}this website's{% endif %} time zone, like this: <em>{{ v.example_time }}</em>.</p>
 
 <h2 id="summary-box">The summary</h2>
 <p>The first box names the domain being tested (the domain of the From: address), gives an overall status,
@@ -94,10 +94,10 @@
 
 <h2 id="attachments">Attachments</h2>
 <dl class="docs-defs">
-    <dt>{{ app_title }} Summary (yourdomain.com).png</dt>
+    <dt>{{ app_title }} Summary (example.com).png</dt>
     <dd>The summary box as a picture, to paste into a ticket, a chat or a slide. (If the picture can't be drawn,
         the report is sent without it.)</dd>
-    <dt>Email Headers (yourdomain.com).txt</dt>
+    <dt>Email Headers (example.com).txt</dt>
     <dd>The test message's headers as text, for a closer look (headers over {{ v.max_header_kb }} KB are cut off).
         The message's text is never included.</dd>
 </dl>

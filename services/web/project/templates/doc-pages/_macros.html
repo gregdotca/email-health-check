@@ -30,6 +30,17 @@
 {% if v.address %}<code>{{ v.address }}</code>{% else %}the test address{% endif %}
 {%- endmacro %}
 
+{#- Where to get the test address when this installation doesn't show it (IS_PUBLIC_INSTANCE=False) -#}
+{% macro address_note(v) -%}
+{% if not v.address %} This website doesn't show the test address: ask whoever runs it.{% endif %}
+{%- endmacro %}
+
+{#- The report emails' sender: name <address> on a public site, the name alone otherwise (or nothing) -#}
+{% macro sender(v) -%}
+{% if v.report_from_name %}<strong>{{ v.report_from_name }}</strong>{% endif %}
+{%- if v.report_from %}{{ " " if v.report_from_name }}<code>&lt;{{ v.report_from }}&gt;</code>{% endif %}
+{%- endmacro %}
+
 {% macro within(v) -%}
 {% if v.poll_seconds %}about {{ v.poll_seconds }} seconds{% else %}a minute or so{% endif %}
 {%- endmacro %}

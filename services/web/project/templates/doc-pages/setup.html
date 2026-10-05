@@ -2,11 +2,10 @@
 {% block body %}
 <h2 id="requirements">Requirements</h2>
 <ul>
-    <li><strong>A mailbox used only for tests</strong>, reachable over IMAP with TLS on port 993 (not
-        configurable) with a username and password. The test address can be the mailbox's own address or an
-        alias delivered into it.</li>
-    <li><strong>A receiving mail server that writes Exim-style <code>Received:</code> headers</strong> (see
-        <a href="{{ url_for('docs.page', slug='how-it-works') }}#trust">What's trusted</a>).</li>
+    <li><strong>A mailbox used only for tests</strong>, on a mail server that writes Exim-style
+        <code>Received:</code> headers (see <a href="{{ url_for('docs.page', slug='how-it-works') }}#trust">What's
+        trusted</a>), reachable over IMAP with TLS on port 993 (not configurable) with a username and password.
+        The test address can be the mailbox's own address or an alias delivered into it.</li>
     <li><strong>An SMTP service to send the reports</strong>, with STARTTLS (usually port 587), or without TLS
         if <code>SENDING_EMAIL_USE_TLS=False</code>. Implicit TLS (usually port 465) isn't supported. Your sending
         domain's SPF and DKIM should include it, so the reports themselves are delivered.</li>

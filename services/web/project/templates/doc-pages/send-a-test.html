@@ -3,10 +3,10 @@
 {% block body %}
 <h2 id="send">Send the test</h2>
 <ol>
-    <li>Pick a mailbox on the domain you want to check, for example <code>postmaster@yourdomain.com</code> or
+    <li>Pick a mailbox on the domain you want to check, for example <code>postmaster@example.com</code> or
         your own address there.</li>
     <li>Send an email from it to {{ m.address(v) }}. Any subject and body text will do (though some mail programs
-        won't send a message with a blank subject).</li>
+        won't send a message with a blank subject).{{ m.address_note(v) }}</li>
     <li>Wait for the reply. The test address is checked
         {% if v.poll_seconds %}every {{ v.poll_seconds }} seconds{% else %}regularly{% endif %}, so the report
         usually arrives within {{ m.within(v) }}.</li>
@@ -25,7 +25,9 @@
     the same domain, so a Return-Path at <code>bounces.example.com</code> matches a From: address at
     <code>example.com</code>. This keeps reports from going to unrelated domains, but it doesn't prove who sent the
     test (both addresses can be forged), which is why there are <a href="#how-often">sending limits</a> too.</p>
-<p>Failing SPF, DKIM or DMARC never stops the reply: that's exactly what you want to know. But a reply sent
+{% if v.report_from %}<p>Reports come from <code>{{ v.report_from }}</code>. Add it to your contacts or your mail
+    filter's allow list so they don't land in spam.</p>
+{% endif %}<p>Failing SPF, DKIM or DMARC never stops the reply: that's exactly what you want to know. But a reply sent
     to a domain whose own mail setup is badly broken may itself be delayed or filtered, so if it doesn't come,
     <a href="{{ url_for('docs.page', slug='view-online') }}">look the report up online</a>.</p>
 

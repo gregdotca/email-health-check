@@ -1,6 +1,7 @@
 """The documentation at /docs/ (DOCS_ENABLED, on by default): a few pages of plain HTML, with this
 installation's own values (its test address, limits and retention times) filled in from the settings
-and the code, so the docs always describe the instance they're on. Nothing here touches the database.
+and the code, so the docs always describe the instance they're on. Unless IS_PUBLIC_INSTANCE=True they say
+"the test address" and leave out the poll interval, the reports' From: address and the time zone. Nothing here touches the database.
 
 /docs and the old-style /help and /documentation addresses redirect (301) to /docs/; each page lives
 at /docs/<slug>/ and its slash-less form redirects there. With DOCS_ENABLED=False they're all 404s.
@@ -16,17 +17,29 @@ from healthcheck.analyze import MAX_HEADER_BYTES
 from healthcheck.dkimcheck import EXPIRED, MAX_SIGNATURES, SHA1
 from healthcheck.dkimcheck import EXPLANATIONS as DKIM_EXPLANATIONS
 from healthcheck.dmarccheck import POLICY_EFFECT
-from healthcheck.mailer import SKIP_LOCAL_PARTS
+from healthcheck.mailer import SKIP_LOCAL_PARTS, report_sender
 from healthcheck.settings import DEFAULTS, settings
 from healthcheck.spfcheck import EXPLANATIONS as SPF_EXPLANATIONS
 from healthcheck.spfcheck import MAX_LOOKUPS
 
 docs = Blueprint("docs", __name__)
 
-# The web service is given these two for the docs (never the mail passwords); either may be missing
+# The web service is given these for the docs (never the mail logins or passwords); any may be missing
 TEST_ADDRESS = os.environ.get("RECEIVING_EMAIL_ADDRESS", "").strip()
 _poll = os.environ.get("POLL_SECONDS", "").strip()
 POLL_SECONDS = int(_poll) if _poll.isdigit() and int(_poll) >= poller.MIN_POLL_SECONDS else None
+# The report emails' From: by the poller's own rule ("" for the address: the test address, filled in below)
+SENDING_FROM, SENDING_FROM_NAME = report_sender(os.environ, "")
+
+
+def published():
+    """What the web pages may say about this installation, read per request so tests can change it. Unless
+    IS_PUBLIC_INSTANCE=True, neither the homepage nor the docs name the test address, the poll interval, the
+    address the reports come from or the time zone. The reports' display name is always shown: it's no secret."""
+    public = settings.is_public_instance
+    return {"address": TEST_ADDRESS if public else "", "poll_seconds": POLL_SECONDS if public else None,
+            "report_from": (SENDING_FROM or TEST_ADDRESS) if public else "", "report_from_name": SENDING_FROM_NAME,
+            "timezone": str(settings.display_timezone) if public else ""}
 
 
 @dataclass(frozen=True)
@@ -129,8 +142,7 @@ def _minutes(seconds):
 def values():
     """This installation's numbers and names, as the pages show them."""
     return {
-        "address": TEST_ADDRESS, "poll_seconds": POLL_SECONDS, "public_url": settings.public_url,
-        "timezone": str(settings.display_timezone),
+        **published(), "public_url": settings.public_url,
         "custom_header_html": bool(settings.custom_header_html),  # whether the pages carry the operator's own code
         "mail_hour": dict(store.MAIL_LIMITS)[3600], "mail_day": dict(store.MAIL_LIMITS)[86400],
         "mail_total": dict(store.MAIL_DAILY_LIMIT)[86400],
@@ -152,7 +164,7 @@ _EXAMPLE = {"from": "you@example.com", "arrived_at": "2026-10-01T15:42:00+00:00"
             "dmarc": {"result": "pass", "record": "v=DMARC1; p=quarantine"}}
 EXAMPLES = {
     "passed": {**_EXAMPLE, "dkim": [{"domain": "example.com", "result": "pass"}]},
-    "esp-only": {**_EXAMPLE, "dkim": [{"domain": "mailservice.example.net", "result": "pass"}]},
+    "esp-only": {**_EXAMPLE, "dkim": [{"domain": "mailservice.example.org", "result": "pass"}]},
     "no-spf": {**_EXAMPLE, "spf": {"result": "softfail", "domain": "example.com", "lookups": 3},
                "dkim": [{"domain": "example.com", "result": "pass"}]},
     "dns-error": {**_EXAMPLE, "mx": {"result": "temperror"}, "dkim": [{"domain": "example.com", "result": "pass"}]},

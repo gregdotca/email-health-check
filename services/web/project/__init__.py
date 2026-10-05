@@ -137,9 +137,11 @@ def docs_link():
 
 @app.context_processor
 def how_to_send():
-    """The test address and poll interval for the homepage's "how to send a test" line (from the docs'
-    settings, read per request so tests can change them)."""
-    return {"test_address": docs_module.TEST_ADDRESS, "poll_seconds": docs_module.POLL_SECONDS}
+    """The homepage's "how to send a test" paragraphs (only with IS_PUBLIC_INSTANCE=True), with the test address and poll
+    interval (from the docs' settings, read per request so tests can change them)."""
+    shown = docs_module.published()
+    return {"public_instance": docs_module.settings.is_public_instance, "test_address": shown["address"],
+            "poll_seconds": shown["poll_seconds"]}
 
 
 def custom_header_here():

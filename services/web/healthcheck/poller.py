@@ -36,7 +36,7 @@ import time
 from datetime import UTC, datetime
 
 from .analyze import _address, analyze, bounded, header_block, headers_text
-from .mailer import DEFAULT_FROM_NAME, Mailer, SendError, describe, reply_to
+from .mailer import Mailer, SendError, describe, reply_to, report_sender
 from .settings import settings
 from .store import MAIL_DAILY_LIMIT, MAIL_LIMITS, Store
 import contextlib
@@ -387,7 +387,7 @@ def main():
     store = Store(env.get("DB_PATH", "health-check.sqlite3"))
     mailbox = env["RECEIVING_EMAIL_ADDRESS"]  # the test address
     login = env["RECEIVING_EMAIL_USER"]  # the IMAP login: often the same, but not for an alias
-    from_addr = env.get("SENDING_EMAIL_FROM") or mailbox
+    from_addr, from_name = report_sender(env, mailbox)
     port, use_tls = smtp_port(env.get("SENDING_EMAIL_PORT", "")), true_false(env.get("SENDING_EMAIL_USE_TLS", ""), True)
     if port is None or use_tls is None:
         log.error("%s", "SENDING_EMAIL_PORT must be a port number (e.g. 587)" if port is None else
@@ -395,7 +395,7 @@ def main():
         sys.exit(2)
     mailer = Mailer(env["SENDING_EMAIL_HOST"], port, use_tls,
                     env.get("SENDING_EMAIL_HOST_USER"), env.get("SENDING_EMAIL_HOST_PASSWORD"),
-                    from_addr, env.get("SENDING_EMAIL_FROM_NAME", DEFAULT_FROM_NAME))
+                    from_addr, from_name)
     if "--check-smtp" in sys.argv:
         sys.exit(check_smtp(mailer))
     poller = Poller(store, mailer, dry_run=dry_run, own_addresses=(mailbox, from_addr),

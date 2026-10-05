@@ -20,17 +20,17 @@ check, and the report shows what a receiving server sees.
 - **Shareable:** the report email includes the summary as a picture, plus the full message headers.
 - **Optional web page** to look a report up by address, with built-in documentation at `/docs/`.
 - **Private by design:** message bodies are never stored, test messages are deleted once they've been
-  handled, and reports online expire within a day (minutes after they're first viewed).
+  handled, and reports online expire within a day by default (minutes after they're first viewed).
 - **Self-hosted:** one Docker image, configured entirely from a `.env` file.
 
 ## Requirements
 
-- A mailbox used only for tests, reachable over IMAP with TLS (port 993) and a password login. The
-  poller checks and deletes every message in it, so don't use a mailbox that gets other mail.
-- A receiving mail server that writes Exim-style `Received:` headers (other formats need changes to
-  `healthcheck/received.py`).
-- An SMTP service to send the reports, with STARTTLS (usually port 587). Your sending domain's SPF and
-  DKIM should include it, so the reports themselves are delivered.
+- A mailbox used only for tests, on a mail server that writes Exim-style `Received:` headers (other formats
+  need changes to `healthcheck/received.py`), reachable over IMAP with TLS (port 993) and a password login.
+  The poller checks and deletes every message in it, so don't use a mailbox that gets other mail.
+- An SMTP service to send the reports, with STARTTLS (usually port 587), or without TLS if
+  `SENDING_EMAIL_USE_TLS=False`. Implicit TLS (usually port 465) isn't supported. Your sending domain's SPF
+  and DKIM should include it, so the reports themselves are delivered.
 - Docker with Compose, and, for the optional web page, a hostname and a reverse proxy for HTTPS.
 
 ## Quick start
@@ -42,13 +42,15 @@ check, and the report shows what a receiving server sees.
     docker compose up -d --build
 
 The `--check-smtp` line checks your settings and the SMTP login without sending anything. Then send any
-email to the test address and the report should arrive within about 30 seconds (it checks the mailbox
-every `POLL_SECONDS`, 30 in `.env.example`).
+email to the test address and the report should arrive within a minute or so (it checks the mailbox every
+`POLL_SECONDS`, 30 in `.env.example`).
 
 ## Configuration
 
-Everything is set in `.env`, and `.env.example` lists and explains every setting. Its first section is the
-ones you must fill in, and everything below it is already set to the defaults:
+Everything is set in `.env`, and `.env.example` lists and explains every setting. Its first section starts
+with `IS_PUBLIC_INSTANCE` (`True` for a web page meant for anyone, which then shows the test address,
+`False` by default), followed by the settings you must fill in. Everything below it is already set to the
+defaults:
 
 | Setting | What it's for |
 |---|---|
@@ -65,7 +67,8 @@ tells the app there's a web page, the second tells Docker Compose to start it. P
 ## Documentation
 
 With the web page running, the full documentation is at `/docs/` on your installation (for example
-`https://check.example.com/docs/`), filled in with your own test address and limits. It covers sending
+`https://check.example.com/docs/`), filled in with your own limits, and your test address when
+`IS_PUBLIC_INSTANCE=True`. It covers sending
 tests, reading every part of the report, each check and how to fix it, troubleshooting, privacy and
 limits, and running your own copy (how it works, every setting, logs and updating). The pages' source is
 in `services/web/project/templates/doc-pages/`.
@@ -76,8 +79,8 @@ in `services/web/project/templates/doc-pages/`.
   was or wasn't answered (it never logs addresses). Tests from mailing lists, no-reply addresses or a
   different envelope domain aren't answered by email.
 - **Does it keep my email?** No. Bodies are only read in memory to check DKIM, each test is deleted from
-  the mailbox once it's been handled, and with the web page a report (headers and results) is kept for up
-  to 24 hours if nobody views it, then 5 minutes after it's first viewed.
+  the mailbox once it's been handled, and with the web page a report (headers and results) is kept, by
+  default, for up to 24 hours if nobody views it, then 5 minutes after it's first viewed.
 - **How do I update?** `git pull`, then `docker compose up -d --build`. Check the changelog and
   `.env.example` for new settings first.
 - **Can I try it without sending or deleting anything?** Set `DRY_RUN=True`.

@@ -5,8 +5,17 @@ Date-grouped, newest first.
 ## Unreleased
 
 ### Web page
-- The homepage now says how to send a test: the test address, how soon the report arrives, how to view the
-  report with the form below, and where to find the documentation.
+- The homepage can now say how to send a test: the test address, how soon the report arrives, how to view
+  the report with the form below, and where to find the documentation.
+- New setting `IS_PUBLIC_INSTANCE` (default `False`): `True` shows that text and lets the documentation name
+  the test address, how often it's checked, the address the reports come from and the time zone, for a
+  website meant for anyone. On such a site the documentation says which address reports come from (look for
+  it in spam, add it to your contacts). The web service is now also given `SENDING_EMAIL_FROM` and
+  `SENDING_EMAIL_FROM_NAME` for this. It's the first setting in `.env.example`.
+- `SENDING_EMAIL_FROM` and `SENDING_EMAIL_FROM_NAME` made of only spaces now count as empty (the test address,
+  and no display name), where a space-only address used to make a broken From: line. With `False` the home page is
+  just the form, and the documentation says "the test address" without naming it (with a line saying to
+  ask whoever runs the site). A report's full email headers, viewed online, still include it.
 - The Docs link in the page header stands out more: an outlined button in the accent colour.
 - New settings `CUSTOM_HEADER_HTML` and `CUSTOM_HEADER_CSP`: add your own HTML to the `<head>` of every web page
   (visitor statistics and the like) and say what it may load. Inline scripts and styles are allowed by
@@ -16,6 +25,18 @@ Date-grouped, newest first.
   set to its default.
 
 ### Documentation
+- README brought in line with the documentation: the first report arrives "within a minute or so" (was
+  "about 30 seconds"), the docs name the test address only with `IS_PUBLIC_INSTANCE=True`, the first section
+  of `.env.example` starts with `IS_PUBLIC_INSTANCE`, retention times are the defaults, and SMTP may run
+  without TLS (implicit TLS on port 465 isn't supported).
+- Requirements (README and setup page): the test mailbox and the Exim-style mail server are now one item,
+  since the mailbox lives on that server.
+- "What's in the report" names the report emails' real sender (`SENDING_EMAIL_FROM_NAME`), where it always
+  said `APP_NAME`.
+- Sample domains are now `example.com` throughout (was `yourdomain.com` in places, and `example.net` for the
+  sample mail servers in `.env.example`), with `example.org` where a second domain is needed (a mail
+  service's own domain, `mailservice.example.org`). Only domains reserved for examples are used, so the
+  glossary no longer names a real registered domain.
 - "Send an email to" in place of "Send one email to" / "Send any email to" on the introduction page
   (`services/web/project/templates/doc-pages/index.html:4`), the setup page
   (`services/web/project/templates/doc-pages/setup.html:56`) and the README (`README.md:3`).

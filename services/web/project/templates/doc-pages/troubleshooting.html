@@ -2,7 +2,8 @@
 {% import "doc-pages/_macros.html" as m %}
 {% block body %}
 <h2 id="no-report">No report arrived</h2>
-<p>Give it a couple of minutes, and check your spam folder. Then
+<p>Give it a couple of minutes, and check your spam folder{% if v.report_from %} for an email from
+    <code>{{ v.report_from }}</code>{% endif %}. Then
     {% if v.public_url %}<a href="{{ url_for('docs.page', slug='view-online') }}">look the report up online</a>
     with the address you sent from{% else %}work through the list below{% endif %}:</p>
 <ul>
@@ -46,7 +47,7 @@
     <thead><tr><th>The summary says</th><th>What to do</th></tr></thead>
     <tbody>
         <tr><td>Is authenticated: No (SPF: softfail, fail, neutral or none)</td><td>Add the sending server or service to your <a href="{{ url_for('docs.page', slug='spf') }}#fixing">SPF record</a>.</td></tr>
-        <tr><td>no DKIM signature for <em>yourdomain</em></td><td>Your mail service signs with its own domain. Turn on <a href="{{ url_for('docs.page', slug='dkim') }}#fixing">DKIM for your domain</a> in its settings.</td></tr>
+        <tr><td>no DKIM signature for <em>example.com</em></td><td>Your mail service signs with its own domain. Turn on <a href="{{ url_for('docs.page', slug='dkim') }}#fixing">DKIM for your domain</a> in its settings.</td></tr>
         <tr><td>no DKIM signature</td><td>You have DMARC but no DKIM. <a href="{{ url_for('docs.page', slug='dkim') }}#fixing">Set up DKIM</a>.</td></tr>
         <tr><td>DKIM: fail or permerror</td><td>See <a href="{{ url_for('docs.page', slug='dkim') }}#fixing">DKIM</a>: a missing key record, or a message changed on the way.</td></tr>
         <tr><td>DMARC: fail or permerror</td><td>See <a href="{{ url_for('docs.page', slug='dmarc') }}#fixing">DMARC</a>.</td></tr>

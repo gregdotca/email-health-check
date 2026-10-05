@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% if missing_page %}<p class="empty">That page doesn't exist.{% if docs_enabled %} Try the <a href="{{ url_for('docs.index') }}">documentation</a>, or look up a report below.{% endif %}</p>{% endif %}
+{% if public_instance %}
 <div class="intro">
 <p>Send an email to {% if test_address %}<code>{{ test_address }}</code>{% else %}the test address{% endif %}
     from any email address on the domain you want to check, and the report will be emailed back to you with your results, usually within
@@ -9,5 +10,6 @@
     test from and click "<em>View Report</em>".</p>
 {% if docs_enabled %}<p>For more information, see the <a href="{{ url_for('docs.index') }}">documentation</a>.</p>{% endif %}
 </div>
+{% endif %}
 {% include "_form.html" %}
 {% endblock %}

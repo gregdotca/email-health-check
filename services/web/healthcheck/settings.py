@@ -29,6 +29,9 @@ DEFAULTS = {
     "MAIL_PER_RECIPIENT_PER_DAY": "10",
     "MAIL_PER_DAY": "50",  # results emails in total, from everyone: a hard daily ceiling
     "DOCS_ENABLED": "True",  # the documentation at /docs/ on the web page (True or False)
+    # True: a site for anyone, whose home page and docs say how to send a test (the test address, poll time);
+    # False: a private site, just the form, and the web pages never name the test address or poll time
+    "IS_PUBLIC_INSTANCE": "False",
     "CUSTOM_HEADER_HTML": "",  # HTML added to the <head> of the web pages (visitor statistics and the like)
     "CUSTOM_HEADER_CSP": "",  # what it may load, e.g. "script-src https://stats.example.com; connect-src ..."
 }
@@ -61,6 +64,7 @@ class Settings:
     mail_per_recipient_per_day: int
     mail_per_day: int
     docs_enabled: bool
+    is_public_instance: bool  # False (default): the web pages never show the test address or poll time
     custom_header_html: str  # "": none
     custom_header_csp: dict  # {directive: (source, ...)} added to the Content-Security-Policy
 
@@ -106,6 +110,7 @@ def load(env=os.environ):
         mail_per_recipient_per_day=whole("MAIL_PER_RECIPIENT_PER_DAY"),
         mail_per_day=whole("MAIL_PER_DAY"),
         docs_enabled=on_off("DOCS_ENABLED"),
+        is_public_instance=on_off("IS_PUBLIC_INSTANCE"),
         custom_header_html=_custom_header(get("CUSTOM_HEADER_HTML")),
         custom_header_csp=_csp_sources(get("CUSTOM_HEADER_CSP")),
     )
