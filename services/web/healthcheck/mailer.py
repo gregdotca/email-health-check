@@ -28,6 +28,7 @@ from .store import UNVIEWED_SECONDS, VIEWED_SECONDS
 log = logging.getLogger("healthcheck.mailer")
 
 DEFAULT_FROM_NAME = settings.app_name  # APP_NAME, unless SENDING_EMAIL_FROM_NAME says otherwise
+RESULTS_URL = settings.public_url  # PUBLIC_URL: the web page where the same results can be looked up ("": none)
 
 
 def report_sender(env, test_address):
@@ -36,7 +37,6 @@ def report_sender(env, test_address):
     of only spaces counts as empty. The poller sends with these, and the docs describe them, so both agree."""
     address = (env.get("SENDING_EMAIL_FROM") or "").strip() or test_address
     return address, env.get("SENDING_EMAIL_FROM_NAME", DEFAULT_FROM_NAME).strip()
-RESULTS_URL = settings.public_url  # PUBLIC_URL: the web page where the same results can be looked up ("": none)
 
 
 def results_link(r):
