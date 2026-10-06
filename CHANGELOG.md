@@ -92,6 +92,8 @@ Date-grouped, newest first.
   hourly limit can take up to an hour to clear, so "Wait a minute" was misleading).
 - README: the SMTP login is optional, an empty `SENDING_EMAIL_FROM_NAME` means no name, retries are
   minimum gaps on later mailbox checks, and the limits are rolling windows.
+- Documentation: the introduction and "Send a test" now say the same thing about what to send: "Any subject
+  and any body text will do (don't leave them blank)."
 
 ## 2026-10-04: first public release
 

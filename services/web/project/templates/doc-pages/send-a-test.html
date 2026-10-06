@@ -5,8 +5,8 @@
 <ol>
     <li>Pick a mailbox on the domain you want to check, for example <code>postmaster@example.com</code> or
         your own address there.</li>
-    <li>Send an email from it to {{ m.address(v) }}. Any subject and body text will do (though some mail programs
-        won't send a message with a blank subject).{{ m.address_note(v) }}</li>
+    <li>Send an email from it to {{ m.address(v) }}. Any subject and any body text will do
+        (don't leave them blank).{{ m.address_note(v) }}</li>
     <li>Wait for the reply. The test address is checked
         {% if v.poll_seconds %}every {{ v.poll_seconds }} seconds{% else %}regularly{% endif %}, so the report
         usually arrives within {{ m.within(v) }}.</li>
