@@ -94,6 +94,8 @@ Date-grouped, newest first.
   minimum gaps on later mailbox checks, and the limits are rolling windows.
 - Documentation: the introduction and "Send a test" now say the same thing about what to send: "Any subject
   and any body text will do (don't leave them blank)."
+- `ACR.md`: the "How AI Was Used" section now says the code is also reviewed by a second AI, which it
+  already was, and has a comma before "and the documentation". `updated` is 2026-10-09.
 
 ## 2026-10-04: first public release
 
