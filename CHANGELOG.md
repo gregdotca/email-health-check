@@ -96,6 +96,8 @@ Date-grouped, newest first.
   and any body text will do (don't leave them blank)."
 - `ACR.md`: the "How AI Was Used" section now says the code is also reviewed by a second AI, which it
   already was, and has a comma before "and the documentation". `updated` is 2026-10-09.
+- The AI Code Rating is now `B4b` (Oversight: Reviewed, was Spot-Checked): every AI change is read by the
+  maintainer before it's committed. `ACR.md` and the README badge say so, and `updated` is 2026-10-12.
 
 ## 2026-10-04: first public release
 

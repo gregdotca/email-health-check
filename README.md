@@ -1,6 +1,6 @@
 # Email Health Check
 
-[![ACR B4c](https://img.shields.io/badge/ACR-B4c-2140B5)](ACR.md)
+[![ACR B4b](https://img.shields.io/badge/ACR-B4b-2140B5)](ACR.md)
 
 Send an email to a test address and, within a minute or so, get an email back that says whether your
 domain's mail is set up properly: PTR (reverse DNS), SPF, DKIM and DMARC, plus an at-a-glance summary.
