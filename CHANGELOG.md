@@ -4,6 +4,17 @@ Date-grouped, newest first.
 
 ## Unreleased
 
+### Dependency updates
+- Dependabot now checks `services/web/requirements.txt` and the Python base image in `services/web/Dockerfile`
+  once a month (`.github/dependabot.yml`), with all pip updates grouped into one pull request. Alerts and
+  security fix pull requests (set in the GitHub repository's settings) only cover known vulnerabilities, so
+  nothing kept the pinned packages or the base image current otherwise. It only proposes versions that have
+  been out for at least 7 days, so a bad or hijacked release has time to be caught and pulled first; security
+  fixes aren't delayed. `requirements.txt` pins every package, indirect ones included, and the image installs
+  only those, so an update that needs a new indirect package fails the build until it's added. Not covered,
+  so still updated by hand: pip, setuptools, flake8 and its checkers (mccabe, pycodestyle, pyflakes), all
+  pinned in the `Dockerfile`.
+
 ### Web page
 - The homepage can now say how to send a test: the test address, how soon the report arrives, how to view
   the report with the form below, and where to find the documentation.
