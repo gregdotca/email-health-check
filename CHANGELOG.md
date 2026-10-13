@@ -5,11 +5,13 @@ Date-grouped, newest first.
 ## Unreleased
 
 ### Dependency updates
+- Python 3.13.16 to 3.14.8 in both stages of `services/web/Dockerfile`. Dependabot proposed 3.14.7, but 3.14.8
+  is a security release and was already out. Every pinned package builds on 3.14 and the tests pass on it.
 - Dependabot now checks `services/web/requirements.txt` and the Python base image in `services/web/Dockerfile`
   once a month (`.github/dependabot.yml`), with all pip updates grouped into one pull request. Alerts and
   security fix pull requests (set in the GitHub repository's settings) only cover known vulnerabilities, so
   nothing kept the pinned packages or the base image current otherwise. It only proposes versions that have
-  been out for at least 7 days, so a bad or hijacked release has time to be caught and pulled first; security
+  been out for at least 7 days, so a bad or hijacked release has time to be caught and pulled first. Security
   fixes aren't delayed. `requirements.txt` pins every package, indirect ones included, and the image installs
   only those, so an update that needs a new indirect package fails the build until it's added. Not covered,
   so still updated by hand: pip, setuptools, flake8 and its checkers (mccabe, pycodestyle, pyflakes), all
