@@ -4,6 +4,9 @@ Date-grouped, newest first.
 
 ## Unreleased
 
+### License
+- `LICENSE`: the copyright line now includes a contact address.
+
 ### Dependency updates
 - Python 3.13.16 to 3.14.8 in both stages of `services/web/Dockerfile`. Dependabot proposed 3.14.7, but 3.14.8
   is a security release and was already out. Every pinned package builds on 3.14 and the tests pass on it.
