@@ -10,7 +10,7 @@ PyNaCl==1.6.2
 dnspython==2.8.0
 publicsuffixlist==1.0.2.20261003
 tzdata==2026.5
-Pillow==12.3.0
+Pillow==13.0.0
 # needed by the packages above
 blinker==1.9.0
 cffi==2.1.1

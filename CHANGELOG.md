@@ -8,6 +8,9 @@ Date-grouped, newest first.
 - `LICENSE`: the copyright line now includes a contact address.
 
 ### Dependency updates
+- Pillow 12.3.0 to 13.0.0 in `services/web/requirements.txt`, fixing the security issues reported in 12.3.0
+  (Dependabot pull request #2). None of Pillow 13's breaking changes touch the parts this project uses, the
+  tests pass, and the summary image comes out exactly the same.
 - Python 3.13.16 to 3.14.8 in both stages of `services/web/Dockerfile`. Dependabot proposed 3.14.7, but 3.14.8
   is a security release and was already out. Every pinned package builds on 3.14 and the tests pass on it.
 - Dependabot now checks `services/web/requirements.txt` and the Python base image in `services/web/Dockerfile`
