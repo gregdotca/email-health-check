@@ -8,6 +8,9 @@ Date-grouped, newest first.
 - `LICENSE`: the copyright line now includes a contact address.
 
 ### Dependency updates
+- dnspython 2.8.0 to 2.9.0 in `services/web/requirements.txt`. 2.9.0 limits how far a DNS name can be
+  decompressed, so a crafted DNS answer can no longer make lookups use too much CPU. None of its changes touch
+  the parts this project uses, and the tests and live DNS lookups work on it.
 - Pillow 12.3.0 to 13.0.0 in `services/web/requirements.txt`, fixing the security issues reported in 12.3.0
   (Dependabot pull request #2). None of Pillow 13's breaking changes touch the parts this project uses, the
   tests pass, and the summary image comes out exactly the same.
