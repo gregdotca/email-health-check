@@ -8,6 +8,9 @@ Date-grouped, newest first.
 - `LICENSE`: the copyright line now includes a contact address.
 
 ### Dependency updates
+- publicsuffixlist 1.0.2.20261003 to 1.1.2.20261023 and pycparser 3.0 to 3.12 in
+  `services/web/requirements.txt` (Dependabot pull request #7). The newer public suffix list keeps the DMARC
+  check's organizational domains current. The one function used here is unchanged, and the tests pass.
 - dnspython 2.8.0 to 2.9.0 in `services/web/requirements.txt`. 2.9.0 limits how far a DNS name can be
   decompressed, so a crafted DNS answer can no longer make lookups use too much CPU. None of its changes touch
   the parts this project uses, and the tests and live DNS lookups work on it.
