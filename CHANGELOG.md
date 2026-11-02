@@ -8,6 +8,10 @@ Date-grouped, newest first.
 - `LICENSE`: the copyright line now includes a contact address.
 
 ### Dependency updates
+- Python 3.14.8 to 3.15.2 in both stages of `services/web/Dockerfile` (Dependabot pull request #3 proposed
+  3.15.0). 3.15.2 is a security release: it stops trusting the compromised eMudhra certificate authority keys
+  for TLS connections, such as the ones to the mail servers, and includes the security fixes from 3.15.1. Every
+  pinned package installs on 3.15, the image builds, the tests pass, and the summary image is unchanged.
 - publicsuffixlist 1.0.2.20261003 to 1.1.2.20261023 and pycparser 3.0 to 3.12 in
   `services/web/requirements.txt` (Dependabot pull request #7). The newer public suffix list keeps the DMARC
   check's organizational domains current. The one function used here is unchanged, and the tests pass.
