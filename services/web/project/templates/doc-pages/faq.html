@@ -56,9 +56,11 @@
     then stop working.</p>
 
 <h3 id="dns-changes">I fixed my DNS, but the new test says the same thing.</h3>
-<p>DNS answers are cached for as long as the record's TTL (time to live) says, often an hour or more, so a
-    change can take that long to be seen everywhere, including by the check. Wait for the old record's TTL to
-    pass, then send another test.</p>
+<p>The check asks your domain's own DNS servers directly, not a cached copy, so it usually sees a change as
+    soon as they publish it. If the report still shows the old record, the change most likely hasn't reached them
+    yet: check that it was saved at your DNS provider, give it a few minutes, then send another test. (When your
+    DNS servers don't answer the check in time, it uses a cached copy instead, which can be older.) Other mail
+    servers may keep using the old record until its TTL (time to live) has passed, often an hour or more.</p>
 
 <h2 id="results">Understanding the results</h2>
 

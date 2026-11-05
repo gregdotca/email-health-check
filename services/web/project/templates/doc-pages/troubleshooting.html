@@ -56,7 +56,8 @@
         <tr><td>Can receive email: No MX records</td><td>Publish MX records naming the servers that receive the domain's mail.</td></tr>
     </tbody>
 </table>
-<p>After changing DNS, wait for the change to take effect (up to the record's TTL), then send another test.</p>
+<p>After changing DNS, send another test. The check usually sees the change as soon as your DNS provider publishes it,
+    though other mail servers may use the old record until its TTL (time to live) has passed.</p>
 
 <h2 id="incomplete">The report says Incomplete</h2>
 <p>Nothing failed, but something couldn't be checked: usually a temporary DNS error, so send another test. If

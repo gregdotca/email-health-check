@@ -30,7 +30,11 @@
         address, its HELO name and the envelope sender from it.</li>
     <li>It runs the checks: PTR and MX lookups, SPF for the sending IP, DKIM for each signature (using the
         message's text, in memory only), then DMARC. SPF has 20 seconds, and the other DNS lookups share 30
-        seconds, so a domain whose DNS answers slowly can't hold up everyone else's tests.</li>
+        seconds, so a domain whose DNS answers slowly can't hold up everyone else's tests. Each lookup goes
+        straight to the domain's own DNS servers, so the checks see the records as they are now, not a copy
+        cached elsewhere. That's the public view other mail servers get, so a local DNS override on the host
+        (split-horizon DNS) usually doesn't change the result. If those servers can't be reached, it asks the
+        host's usual DNS resolver instead.</li>
     <li>With the website, it saves the report (headers and results, never the text) under a random code.</li>
     <li>It decides whether to reply (see <a href="{{ url_for('docs.page', slug='send-a-test') }}#who-gets-the-report">Who
         gets the report</a> and the limits), and emails the report.</li>

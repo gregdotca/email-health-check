@@ -5,6 +5,11 @@ import time
 
 import spf
 
+from . import dnsutil
+
+# pyspf's lookups get fresh answers from each domain's own nameservers too (see dnsutil)
+spf.DNSLookup = dnsutil.spf_lookup
+
 MAX_LOOKUPS = spf.MAX_LOOKUP  # 10 (RFC 7208 §4.6.4)
 LOOKUP_MECHANISMS = {"include", "a", "mx", "ptr", "exists"}  # plus the redirect= modifier
 MODIFIER = re.compile(r"([a-z][a-z0-9_.-]*)=(.*)", re.I)

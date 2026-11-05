@@ -4,6 +4,22 @@ Date-grouped, newest first.
 
 ## Unreleased
 
+### Fresh DNS lookups
+- Every check now asks each domain's own (authoritative) DNS servers directly (`services/web/healthcheck/dnsutil.py`,
+  with `spfcheck.py` sending pyspf's lookups the same way). Before, lookups went through the host's resolver,
+  which keeps each answer until its TTL runs out, so a test sent just after fixing a record could still be
+  checked against the old one. Only finding a domain's DNS servers still goes through the host's resolver, as
+  they rarely change. If those servers don't answer in time, the lookup falls back to the host's resolver. After
+  three such failures in a row, if the root DNS servers can't be reached either, lookups use only the host's
+  resolver for 10 minutes, so a host that can't reach outside DNS servers doesn't slow down every test, while one
+  domain with broken DNS servers can't switch fresh lookups off for everyone else. Only DNS servers at public
+  addresses are asked, so a domain can't point its DNS servers at a private, loopback, or multicast address and have the
+  checks send queries into the network they run in.
+- The documentation (FAQ, glossary, troubleshooting, and how it works) now says the check usually sees DNS
+  changes right away, while other mail servers may keep using the old record until its TTL has passed. "How it
+  works" also says the checks see the public DNS records, so a local DNS override on the host (split-horizon
+  DNS) usually doesn't change the result (it still can when a lookup falls back to the host's resolver).
+
 ### License
 - `LICENSE`: the copyright line now includes a contact address.
 

@@ -16,7 +16,8 @@
 
     <dt id="dns">DNS record</dt>
     <dd>An entry in a domain's DNS. SPF, DKIM keys and DMARC are all TXT records, while MX and PTR records have their own
-        types. Changes take effect once the old record's TTL (time to live) has passed.</dd>
+        types. Other servers may keep using a copy of the old record until its TTL (time to live) has passed. The
+        check asks the domain's own DNS servers, so it usually sees a change right away.</dd>
 
     <dt id="envelope-sender">Envelope sender</dt>
     <dd>The address a sending server gives when it delivers a message, where bounces are sent. It's saved in the
