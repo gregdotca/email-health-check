@@ -4,6 +4,9 @@ Date-grouped, newest first.
 
 ## Unreleased
 
+### AI Code Rating
+- `ACR.md`: the rating now links to its page on aicoderating.com.
+
 ### Fresh DNS lookups
 - Every check now asks each domain's own (authoritative) DNS servers directly (`services/web/healthcheck/dnsutil.py`,
   with `spfcheck.py` sending pyspf's lookups the same way). Before, lookups went through the host's resolver,
